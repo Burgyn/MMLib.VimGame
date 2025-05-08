@@ -1055,4 +1055,25 @@ footer {
 /* Close button for progress modal will use the general .modal-close-btn style */
 
 /* Ensure kbd styles from help modal apply if used elsewhere, or make them global */
-/* #help-modal kbd is specific, general kbd style is already present */ 
+/* #help-modal kbd is specific, general kbd style is already present */
+
+.splash-info-bubble {
+  background-color: var(--surface-color); /* Changed from rgba(255, 255, 255, 0.1) */
+  border: 1px solid var(--border-color); /* Changed from white */
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px auto;
+  max-width: 70%;
+  text-align: center;
+  color: var(--text-color-muted); /* Changed from #f0f0f0 */
+}
+
+.splash-info-bubble p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.splash-info-bubble .fas {
+  margin-right: 8px;
+  color: var(--primary-color); /* Changed from #61afef */
+} 
