@@ -310,7 +310,6 @@ header {
 
 #main-content-area {
   flex: 1;
-  padding: 1.5rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -339,7 +338,7 @@ header {
 }
 
 #game-area {
-  background-color: var(--background-color);
+  background-color: #232336;
   border-radius: 0;
   padding: 0;
   box-shadow: none;
@@ -359,29 +358,81 @@ header {
   margin-bottom: 0.8rem;
 }
 
+#level-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  margin-bottom: 0;
+  background: var(--surface-color);
+  border-radius: 0;
+  padding: 0.7rem 1.5rem 0.7rem 1.5rem;
+  box-shadow: none;
+  width: 100%;
+}
+#level-header-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+#level-header-right {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
 #level-title {
   font-size: 1.5rem;
   color: var(--secondary-color);
+  font-weight: bold;
+  margin-bottom: 0.1rem;
+  padding-bottom: 0.1rem;
 }
-
 #level-description {
   font-size: 1rem;
-  margin-bottom: 1rem;
   color: var(--text-color-muted);
+  padding-left: 0.1rem;
+  margin-bottom: 0;
+}
+#hint-controls-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+#hint-controls-row #show-hint {
+  margin-right: 0.5rem;
+}
+#hint-controls-row #hint {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+#hint-controls-row #level-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
 }
 
 #terminal-container {
-  flex: 1;
-  background-color: #11131C;
-  border-radius: 8px;
-  padding: 0.5rem;
-  min-height: 300px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  background-color: transparent !important;
+  border-radius: 0;
+  padding: 15px;
+  box-shadow: none;
   overflow: hidden;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .xterm .xterm-viewport {
-  background-color: #11131C !important;
+  background-color: #232336 !important;
+  border-radius: 8px;
 }
 .xterm .xterm-rows > div {
   font-family: var(--font-code) !important;

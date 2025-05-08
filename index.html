@@ -42,20 +42,20 @@
         <p>You can control the game with your keyboard. Use arrow keys to navigate levels and Enter to select.</p>
       </section>
       <section id="game-area" class="hidden">
-        <div id="game-header">
-          <div id="level-title"></div>
-          <button id="show-hint" tabindex="0">Hint <kbd>?</kbd></button>
+        <div id="level-header-row">
+          <div id="level-header-left">
+            <div id="level-title"></div>
+            <div id="level-description"></div>
+          </div>
+          <div id="level-header-right">
+            <button id="show-hint" tabindex="0">Hint <kbd>?</kbd></button>
+            <button id="restart-level" tabindex="0">Restart</button>
+            <button id="next-level" tabindex="0" class="hidden">Next Level</button>
+          </div>
         </div>
-        <div id="level-description"></div>
+        <div id="hint" class="hidden"></div>
         <div id="terminal-container">
           <!-- Xterm.js terminál bude tu -->
-        </div>
-        <div id="hint" class="hidden">
-          <!-- Hinty budú tu -->
-        </div>
-        <div id="level-controls">
-          <button id="restart-level" tabindex="0">Restart</button>
-          <button id="next-level" tabindex="0" class="hidden">Next Level</button>
         </div>
       </section>
     </main>
