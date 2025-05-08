@@ -227,62 +227,59 @@ function processInput(key, lines, cursor) {
       }
       case 'b': {
         commandExecuted = true;
-        let line = newLines[newRow] || "";
-        if (newCol === 0 && newRow > 0) { // Start of line, move to previous
-            newRow--;
-            line = newLines[newRow] || "";
-            newCol = Math.max(0, line.length -1); // Go to end of previous line
-             //Then find beginning of that word
-        }
-        
-        if (newCol > 0 || (newCol === 0 && line.length > 0) ) { // If there's somewhere to move left from or on first char
-            let searchingFrom = newCol;
-             // If on whitespace or start of word, move to previous char to start search
-            if (searchingFrom > 0 && (/\\s/.test(line[searchingFrom]) || (searchingFrom > 0 && /\\s/.test(line[searchingFrom-1])) ) ) {
-                 searchingFrom--;
-            }
+        let r = newRow;
+        let c = newCol;
+        let currentLineText = newLines[r] || "";
 
-            // Skip current word's non-whitespace chars
-            while (searchingFrom > 0 && !/\\s/.test(line[searchingFrom])) {
-                 searchingFrom--;
-            }
-            // If we stopped at a char because it's beginning of line, check if it's non-space
-             if (searchingFrom === 0 && !/\\s/.test(line[searchingFrom])) {
-                newCol = 0;
-             } else {
-                 // Skip whitespace before that word (or current if started on whitespace)
-                 while (searchingFrom > 0 && /\\s/.test(line[searchingFrom])) {
-                     searchingFrom--;
-                 }
-                 // Move to beginning of that word
-                 if (searchingFrom > 0 && /\\s/.test(line[searchingFrom])) { // Landed on space before word
-                     newCol = searchingFrom + 1;
-                 } else { // Landed on first char of word or line
-                     newCol = searchingFrom;
-                 }
-             }
-        } else if (newRow > 0) { // At 0,0 but previous line exists
-            newRow--;
-            line = newLines[newRow] || "";
-            newCol = 0; // Start of the previous line, let next iteration of 'b' handle it or find end word
-            // For simplicity, moving to beginning of prev line. A real 'b' from 0,0 goes to end of prev line then finds word.
-            // This needs more refinement for true Vim 'b' across lines.
-            // For now, 'b' from 0,0 will go to prev line, col 0.
-             let prevLineContent = newLines[newRow] || "";
-             let prevCol = Math.max(0, prevLineContent.length - 1);
-             while(prevCol > 0 && /\\s/.test(prevLineContent[prevCol])) {
-                 prevCol--;
-             }
-             // Now at end of non-space. Find beginning of this word
-             while (prevCol > 0 && !/\\s/.test(prevLineContent[prevCol-1])) {
-                prevCol--;
-            }
-            newCol = prevCol;
-
-        } else {
-            commandExecuted = false; // Cannot move
+        // Phase 1: If current `c` is on whitespace or at the very start of a word, move `c` back one position to start search from there.
+        // This helps `b` when pressed multiple times to correctly cross word boundaries.
+        if (c > 0 && (/\s/.test(currentLineText[c]) || (c > 0 && /\s/.test(currentLineText[c-1])) ) ) {
+            c--;
         }
-         if (!commandExecuted && i == 0) count = 1;
+        // If c is at the start of the line (0) but not the first line, and we need to go to prev line:
+        else if (c === 0 && r > 0 && ( (currentLineText.length === 0) || (currentLineText.length > 0 && /\s/.test(currentLineText[0])) ) ) {
+             // If at (0,0) or (line_start, whitespace) and r > 0, prepare to go to previous line
+        } else if (c > 0 && !/\s/.test(currentLineText[c]) && /\s/.test(currentLineText[c-1]) ){
+            // If cursor is at the beginning of a word (not whitespace, but prev char is whitespace)
+            c--; // Move into the whitespace or previous word to start scan properly.
+        }
+
+        // Phase 2: Find the beginning of the previous/current word.
+        let wordFound = false;
+        while (!wordFound) {
+            if (c >= 0 && c < currentLineText.length) { // Still on the current line text being examined
+                if (/\s/.test(currentLineText[c])) {
+                    c--; // Skip whitespace backwards
+                    if (c < 0) { // Reached beginning of line while skipping spaces
+                        // Handled by the `else` block below (c < 0)
+                    }
+                } else {
+                    // Now on a non-whitespace character. Move to the beginning of this word.
+                    while (c >= 0 && !/\s/.test(currentLineText[c])) {
+                        c--;
+                    }
+                    newCol = c + 1; // The char after the space, or 0 if word starts at line beginning.
+                    newRow = r;
+                    wordFound = true;
+                }
+            } else { // Reached end (c < 0) or start (c >= length, though not for 'b') of current line text
+                if (r > 0) { // Can go to previous line
+                    r--;
+                    currentLineText = newLines[r] || "";
+                    c = Math.max(0, currentLineText.length - 1); // Go to end of previous line
+                    if (currentLineText.length === 0 && r > 0) { // Previous line is empty, and it's not the first line
+                        continue; // Skip this empty line by re-entering while loop
+                    }
+                } else {
+                    // Start of file, cannot move further back
+                    commandExecuted = false;
+                    newRow = 0;
+                    newCol = 0;
+                    wordFound = true; // Stop searching
+                }
+            }
+        }
+        if (!commandExecuted && i === 0) count = 1;
         break;
       }
       case 'e': {
