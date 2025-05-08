@@ -26,8 +26,8 @@ const statusBarCursorPosEl = document.getElementById('status-cursor-pos');
 const statusTimeEl = document.getElementById('status-time');
 
 // Help Modal Elements
-const helpModalEl = document.getElementById('help-modal');
-const closeHelpModalBtnEl = document.getElementById('close-help-modal');
+let helpModalEl;                   // MOVED back to global, changed to let
+let closeHelpModalBtnEl;       // MOVED back to global, changed to let
 
 // Progress Modal Elements - MOVED INSIDE initializeGame
 // const progressModalEl = document.getElementById('progress-modal');
@@ -92,6 +92,10 @@ async function initializeGame() {
   const progressModalEl = document.getElementById('progress-modal');
   const closeProgressModalBtnEl = document.getElementById('close-progress-modal');
   const progressModalContentEl = document.getElementById('progress-modal-content');
+
+  // Assign Help Modal elements here (declared globally)
+  helpModalEl = document.getElementById('help-modal');
+  closeHelpModalBtnEl = document.getElementById('close-help-modal');
 
   // Load level data first
   const levelsLoaded = await loadLevelData();
@@ -193,8 +197,8 @@ async function initializeGame() {
         event.preventDefault(); // Prevent potential further handling
         return;
       }
-      if (key === 'h') {
-        console.log("Global 'h' key pressed for Help");
+      if (event.ctrlKey && event.shiftKey && key === 'h') {
+        console.log("Global 'Ctrl+Shift+H' key pressed for Help");
         showHelpModal();
         event.preventDefault(); // Prevent potential further handling
         return;
