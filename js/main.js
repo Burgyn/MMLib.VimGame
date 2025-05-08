@@ -116,7 +116,11 @@ async function initializeGame() {
   updateSplashFooterStats();
   initializeTerminal();
   renderLevelExplorer(); // Render based on fetched data
-  handleHashChange(); // This will now potentially show home screen by default
+  
+  // Initial call to handle current hash on page load
+  handleHashChange(); 
+  // Listen for subsequent hash changes
+  window.addEventListener('hashchange', handleHashChange, false);
   
   // Add event listener for the main header title
   if (mainTitleHeaderEl) {
