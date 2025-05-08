@@ -409,7 +409,6 @@ header {
 .splash-menu li .keybind {
   margin-left: auto;
   color: var(--yellow); /* Yellow for keybinds, like Neovim */
-  font-weight: bold;
   padding: 0.2rem 0.5rem;
   background-color: rgba(241, 250, 140, 0.1); /* Subtle background for keybind */
   border-radius: 3px;
@@ -996,4 +995,42 @@ footer {
 
 .modal-close-btn:hover {
   color: var(--primary-color);
-} 
+}
+
+/* Progress Modal Styles */
+#progress-modal .modal-content {
+  width: 90%;
+  max-width: 550px; /* Optimal for this content */
+  padding: 25px;
+  text-align: center; /* Center align most content */
+}
+
+#progress-modal h2 {
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+
+#progress-modal-content .fas, /* Targeting Font Awesome icons specifically */
+#progress-modal-content .fa {
+  display: block; /* Make icon take its own line for centering */
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem; 
+}
+
+#progress-modal-content p {
+  line-height: 1.6;
+  color: var(--text-color);
+  margin-bottom: 0.75rem;
+}
+
+#progress-modal-content p strong {
+  color: var(--secondary-color);
+  font-weight: bold; /* Ensure strong is actually bold */
+}
+
+/* Close button for progress modal will use the general .modal-close-btn style */
+
+/* Ensure kbd styles from help modal apply if used elsewhere, or make them global */
+/* #help-modal kbd is specific, general kbd style is already present */ 

@@ -53,7 +53,8 @@
           </div>
           <ul class="splash-menu">
             <li><i class="fas fa-play-circle"></i><span>Start Learning</span><span class="keybind">s</span></li>
-            <li><i class="fas fa-list-ul"></i><span>Select Level</span><span class="keybind">l</span></li>
+            <li><i class="fas fa-list-ul"></i><span>Select Level</span><span class="keybind">Ctrl+Shift+E</span></li>
+            <li><i class="fas fa-tasks"></i><span>My Progress</span><span class="keybind">r</span></li>
             <li><i class="fas fa-question-circle"></i><span>Help</span><span class="keybind">h</span></li>
           </ul>
           <div class="splash-footer">
@@ -121,6 +122,7 @@
         <ul>
           <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> - Focus Level Explorer</li>
           <li><kbd>?</kbd> (in game) - Show Level Hint</li>
+          <li><kbd>s</kbd> (on home screen) - Start Learning</li>
         </ul>
         <h4>Basic Vim Navigation:</h4>
         <ul>
@@ -137,6 +139,18 @@
           <!-- Add more as they are introduced in levels -->
         </ul>
         <p>More shortcuts will be added as you progress through the levels!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Progress Modal -->
+  <div id="progress-modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="close-progress-modal" class="modal-close-btn">&times;</button>
+      <h2>My Progress</h2>
+      <div id="progress-modal-content">
+        <p>Your journey so far...</p>
+        <!-- Motivational content will go here -->
       </div>
     </div>
   </div>

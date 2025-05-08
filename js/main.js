@@ -29,6 +29,11 @@ const statusTimeEl = document.getElementById('status-time');
 const helpModalEl = document.getElementById('help-modal');
 const closeHelpModalBtnEl = document.getElementById('close-help-modal');
 
+// Progress Modal Elements
+const progressModalEl = document.getElementById('progress-modal');
+const closeProgressModalBtnEl = document.getElementById('close-progress-modal');
+const progressModalContentEl = document.getElementById('progress-modal-content');
+
 // Splash Screen Footer Elements for Stats
 const splashCompletedLevelsEl = document.getElementById('splash-completed-levels');
 const splashTotalLevelsEl = document.getElementById('splash-total-levels');
@@ -112,7 +117,6 @@ async function initializeGame() {
   if (mainTitleHeaderEl) {
     mainTitleHeaderEl.addEventListener('click', () => {
       window.location.hash = '#/home';
-      // showAppHomeScreen(); // handleHashChange will take care of this
     });
   }
 
@@ -134,6 +138,56 @@ async function initializeGame() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && helpModalEl && !helpModalEl.classList.contains('hidden')) {
       hideHelpModal();
+    }
+  });
+
+  // Setup for Progress Modal
+  if (closeProgressModalBtnEl) {
+    closeProgressModalBtnEl.addEventListener('click', hideProgressModal);
+  }
+  if (progressModalEl) {
+    progressModalEl.addEventListener('click', (event) => {
+      if (event.target === progressModalEl) { hideProgressModal(); }
+    });
+  }
+
+  // Global keydown listener for home screen shortcuts and modal escapes
+  document.addEventListener('keydown', (event) => {
+    // Modal escapes first
+    if (event.key === 'Escape') {
+      if (helpModalEl && !helpModalEl.classList.contains('hidden')) {
+        hideHelpModal();
+        return; // Consume event
+      }
+      if (progressModalEl && !progressModalEl.classList.contains('hidden')) {
+        hideProgressModal();
+        return; // Consume event
+      }
+    }
+
+    // Home screen specific shortcuts if no modal is open and welcome screen is visible
+    if (welcomeScreenEl && !welcomeScreenEl.classList.contains('hidden') && 
+        (!helpModalEl || helpModalEl.classList.contains('hidden')) &&
+        (!progressModalEl || progressModalEl.classList.contains('hidden'))) {
+      
+      switch (event.key.toLowerCase()) {
+        case 's':
+          console.log("'s' key pressed on home screen for Start Learning");
+          // Find the corresponding menu item and simulate a click 
+          // or directly call the action if it's simpler.
+          document.querySelector('.splash-menu li i.fa-play-circle')?.closest('li')?.click();
+          break;
+        case 'r': // For My Progress
+          console.log("'r' key pressed on home screen for My Progress");
+          document.querySelector('.splash-menu li i.fa-tasks')?.closest('li')?.click();
+          break;
+        case 'h': // For Help
+          console.log("'h' key pressed on home screen for Help");
+          document.querySelector('.splash-menu li i.fa-question-circle')?.closest('li')?.click();
+          break;
+        // Ctrl+Shift+E is handled by a separate, more global listener already in the code for explorer focus.
+        // The 'l' for select level is removed as a direct keybind from home if Ctrl+Shift+E is the main one.
+      }
     }
   });
 }
@@ -743,32 +797,79 @@ function setupSplashScreenMenuActions() {
   const menuItems = document.querySelectorAll('.splash-menu li');
   menuItems.forEach(item => {
     const actionTextElement = item.querySelector('span');
-    if (!actionTextElement) return; // Skip if structure is unexpected
+    if (!actionTextElement) return; 
     const actionText = actionTextElement.textContent.toLowerCase();
-    // const keybind = item.querySelector('.keybind').textContent;
-
+    
     item.addEventListener('click', () => {
-      // console.log(`Splash menu item clicked: ${actionText} (key: ${keybind})`);
-
+      console.log(`Splash menu item clicked: ${actionText}`);
       switch (actionText) {
         case 'start learning':
-          // Start the next level the player is supposed to play (currentLevelId)
-          // or the first level if no progress yet.
           const targetLevelId = playerProgress.currentLevelId || (allLevelsFlat.length > 0 ? allLevelsFlat[0].id : 1);
           window.location.hash = `#/level/${targetLevelId}`;
           break;
-        case 'select level':
+        case 'select level': // The displayed keybind is Ctrl+Shift+E, which is global
           const firstLevelButton = levelsListEl.querySelector('.level-btn:not(.locked), .chapter-header');
           if (firstLevelButton) {
             firstLevelButton.focus();
           }
           break;
+        case 'my progress':
+          showProgressModal();
+          break;
         case 'help':
-          showHelpModal();
+          showHelpModal(); // This should now work correctly
           break;
         default:
           console.warn(`Unknown splash menu action: ${actionText}`);
       }
     });
   });
+}
+
+// NEW functions for Progress Modal
+function showProgressModal() {
+  if (progressModalEl && progressModalContentEl) {
+    const totalLevels = allLevelsFlat.length;
+    const completedCount = Math.max(0, (playerProgress.currentLevelId || 1) - 1);
+    const progressPercentage = totalLevels > 0 ? (completedCount / totalLevels) * 100 : 0;
+
+    let message = '';
+    let icon = '';
+
+    if (progressPercentage === 100) {
+      message = "Congratulations, Vim Master! You've completed all levels!";
+      icon = '<i class="fas fa-crown" style="font-size: 3rem; color: gold;"></i>';
+    } else if (progressPercentage >= 75) {
+      message = "Nearly there, Vim Virtuoso! Keep up the amazing work!";
+      icon = '<i class="fas fa-trophy" style="font-size: 3rem; color: silver;"></i>';
+    } else if (progressPercentage >= 50) {
+      message = "Halfway to mastery! You're doing great, Vim Adept!";
+      icon = '<i class="fas fa-star" style="font-size: 3rem; color: #D4AF37;"></i>'; // Bronze/Star
+    } else if (progressPercentage >= 25) {
+      message = "Solid progress, Vim Padawan! The basics are strong with you.";
+      icon = '<i class="fas fa-medal" style="font-size: 3rem; color: #cd7f32;"></i>'; // Medal
+    } else if (progressPercentage > 0) {
+      message = "A good start, Vim Novice! Every command learned is a victory.";
+      icon = '<i class="fas fa-seedling" style="font-size: 3rem; color: var(--green);"></i>';
+    } else {
+      message = "Welcome to Vim Dojo! Your journey to Vim mastery begins now. Select 'Start Learning'!";
+      icon = '<i class="fas fa-flag-checkered" style="font-size: 3rem; color: var(--text-color-muted);"></i>';
+    }
+
+    progressModalContentEl.innerHTML = `
+      <div style="text-align: center; margin-bottom: 1.5rem;">${icon}</div>
+      <p style="text-align: center; font-size: 1.2rem; margin-bottom: 1rem;">${message}</p>
+      <p style="text-align: center; font-size: 1rem;">You have completed <strong>${completedCount}</strong> out of <strong>${totalLevels}</strong> levels.</p>
+      <p style="text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 0.5rem;">That's ${progressPercentage.toFixed(0)}% progress!</p>
+    `;
+    progressModalEl.classList.remove('hidden');
+  } else {
+    console.error("Progress modal elements not found!");
+  }
+}
+
+function hideProgressModal() {
+  if (progressModalEl) {
+    progressModalEl.classList.add('hidden');
+  }
 } 
