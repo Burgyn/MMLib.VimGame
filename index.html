@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VimGame - Vim Training for Programmers</title>
+  <title>Vim Dojo - Vim Training for Programmers</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -14,7 +14,7 @@
   <header>
     <div class="header-left">
       <img src="https://raw.githubusercontent.com/Burgyn/burgyn.github.io/refs/heads/master/assets/favicon-128x128.png" alt="App Logo" id="app-logo">
-      <h1>VimGame</h1>
+      <h1>Vim Dojo</h1>
     </div>
     <div class="header-right">
       <div class="player-profile">
@@ -30,21 +30,21 @@
   </header>
   <div class="main-container">
     <aside id="levels-sidebar">
-      <h2>Levels</h2>
+      <h2>Levels <span class="shortcut-hint">(Ctrl+L to focus)</span></h2>
       <div id="levels-list">
         <!-- Levely budú tu -->
       </div>
     </aside>
     <main id="main-content-area">
       <section id="welcome-screen">
-        <h2>Welcome to VimGame!</h2>
+        <h2>Welcome to Vim Dojo!</h2>
         <p>Select a level from the left panel and start your journey to Vim mastery.</p>
         <p>You can control the game with your keyboard. Use arrow keys to navigate levels and Enter to select.</p>
       </section>
       <section id="game-area" class="hidden">
         <div id="game-header">
           <div id="level-title"></div>
-          <button id="show-hint" tabindex="0">Hint <kbd>h</kbd></button>
+          <button id="show-hint" tabindex="0">Hint <kbd>?</kbd></button>
         </div>
         <div id="level-description"></div>
         <div id="terminal-container">

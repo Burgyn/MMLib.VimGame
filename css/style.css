@@ -156,6 +156,13 @@ header {
   margin-bottom: 1rem;
 }
 
+.shortcut-hint {
+  font-size: 0.75rem; /* Smaller font size */
+  font-weight: normal; /* Not bold */
+  color: var(--text-color-muted); /* Can use a muted color */
+  margin-left: 0.5rem; /* Some space from the main title */
+}
+
 #levels-list {
   display: flex;
   flex-direction: column;
@@ -175,11 +182,18 @@ header {
   font-family: var(--font-ui);
 }
 
-.level-btn:hover, .level-btn:focus {
+.level-btn:hover {
   background-color: var(--border-color);
   color: var(--text-color);
-  outline: none;
   border-color: var(--secondary-color);
+}
+
+.level-btn:focus {
+  background-color: var(--border-color);
+  color: var(--text-color);
+  outline: 2px solid var(--yellow);
+  outline-offset: 1px;
+  border-color: var(--yellow);
 }
 
 .level-btn.active {

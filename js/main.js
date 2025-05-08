@@ -43,7 +43,10 @@ async function initializeGame() {
 
   initializeTerminal();
   renderLevelList();
-  showWelcomeScreen(); // Zobrazí uvítaciu obrazovku na začiatku
+  handleHashChange(); // Check hash on initial load
+
+  // Optional: Listen for hash changes if user navigates with back/forward browser buttons
+  // window.addEventListener('hashchange', handleHashChange);
 }
 
 async function promptForPlayerName(isInitial = false) {
@@ -170,7 +173,7 @@ function initializeTerminal() {
         }
     } else if (key === 'Escape') { 
         console.log('term.onKey: Escape key pressed.');
-        e.preventDefault();
+        e.preventDefault(); // Reverted to simpler Escape handling in terminal
     } else {
         console.log(`term.onKey: Key '${key}' is not a designated Vim command or Escape. Ignoring.`);
     }
@@ -233,6 +236,9 @@ async function startLevel(levelId) {
   levelDescriptionEl.innerHTML = currentLevelData.description;
   hintEl.classList.add('hidden');
   nextBtnEl.classList.add('hidden');
+  
+  // Update URL hash
+  window.location.hash = `#/level/${levelId}`;
   
   const startText = await fetchTextFile(currentLevelData.startTextFile);
   currentLines = startText.split('\n');
@@ -350,28 +356,79 @@ nextBtnEl.onclick = () => {
 
 // Ovládanie klávesnicou (výber levelu, hint, ...)
 document.addEventListener('keydown', e => {
-  if (!gameAreaEl.classList.contains('hidden')) { // Ak je hra aktívna
-    if (e.key.toLowerCase() === 'h' && !e.ctrlKey && !e.altKey && !e.metaKey) {
-       // Ak nie sme vo formulárovom prvku (napr. input v termináli, ak by bol)
+  // 1. Global shortcut: Ctrl+L to focus level list
+  if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+    e.preventDefault(); // Prevent browser default for Ctrl+L (e.g., open location bar)
+    console.log("Ctrl+L pressed. Attempting to focus level list.");
+    const firstUnlockedLevelButton = levelsListEl.querySelector('.level-btn:not(.locked)');
+    if (firstUnlockedLevelButton) {
+      console.log("Found first unlocked level button:", firstUnlockedLevelButton);
+      if (term && term.textarea && document.activeElement === term.textarea) {
+        console.log("Terminal was focused, blurring it before focusing level button.");
+        term.blur(); // Explicitly blur terminal if it's focused
+      }
+      firstUnlockedLevelButton.focus();
+      console.log("document.activeElement after focus attempt:", document.activeElement);
+      // Adding a slight delay to check if focus holds
+      setTimeout(() => {
+        console.log("document.activeElement 50ms after focus attempt:", document.activeElement);
+      }, 50);
+    } else {
+      console.log("No unlocked level button found to focus for Ctrl+L.");
+    }
+    return; // Ctrl+L handled, stop further processing in this listener
+  }
+
+  // 2. Hint shortcut: '?' (only if game area is active and not in a text input)
+  if (!gameAreaEl.classList.contains('hidden')) { // If game area is active
+    if (e.key === '?' && !e.ctrlKey && !e.altKey && !e.metaKey) {
       if (!(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
          e.preventDefault();
          showHintBtnEl.click();
       }
     }
-  } else { // Ak je aktívny výber levelov
+    // If game area is active and the terminal isn't the active element, 
+    // or if some other specific condition requires it, you might return here.
+    // For now, let it fall through to allow level list navigation if it got focus via Ctrl+L.
+  }
+
+  // 3. Arrow key navigation for level list
+  // This should only happen if:
+  //    a) The welcome screen is active (gameAreaEl is hidden)
+  //    OR
+  //    b) A level button in the sidebar currently has focus.
+  const isLevelButtonFocused = document.activeElement && document.activeElement.matches('#levels-list .level-btn');
+
+  if (gameAreaEl.classList.contains('hidden') || isLevelButtonFocused) {
     const focusableLevelButtons = Array.from(levelsListEl.querySelectorAll('.level-btn:not(.locked)'));
-    if (focusableLevelButtons.length === 0) return;
+    if (focusableLevelButtons.length === 0) return; // No buttons to navigate
 
     let currentIndex = focusableLevelButtons.findIndex(btn => btn === document.activeElement);
 
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      currentIndex = (currentIndex + 1) % focusableLevelButtons.length;
-      focusableLevelButtons[currentIndex].focus();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      currentIndex = (currentIndex - 1 + focusableLevelButtons.length) % focusableLevelButtons.length;
-      focusableLevelButtons[currentIndex].focus();
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); // Prevent default page scroll
+
+      if (e.key === 'ArrowDown') {
+        if (currentIndex === -1 || currentIndex === focusableLevelButtons.length - 1) {
+          currentIndex = 0; // If nothing or last is focused, go to first
+        } else {
+          currentIndex++;
+        }
+      } else { // ArrowUp
+        if (currentIndex === -1 || currentIndex === 0) {
+          currentIndex = focusableLevelButtons.length - 1; // If nothing or first is focused, go to last
+        } else {
+          currentIndex--;
+        }
+      }
+
+      if (focusableLevelButtons[currentIndex]) {
+        console.log("Arrow key: Attempting to focus:", focusableLevelButtons[currentIndex]);
+        focusableLevelButtons[currentIndex].focus();
+        console.log("Arrow key: document.activeElement is now:", document.activeElement);
+      } else {
+        console.warn("Arrow key: Could not find button at new index", currentIndex);
+      }
     }
   }
 });
@@ -452,6 +509,37 @@ async function handleResetProgress() {
       );
     }
   }
+}
+
+// New function to handle URL hash changes
+async function handleHashChange() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#/level/')) {
+    const levelIdStr = hash.substring('#/level/'.length);
+    const levelId = parseInt(levelIdStr, 10);
+
+    if (!isNaN(levelId)) {
+      const levelExists = levels.some(l => l.id === levelId);
+      const isLevelUnlocked = playerProgress && levelId <= playerProgress.currentLevelId;
+
+      if (levelExists && isLevelUnlocked) {
+        await startLevel(levelId);
+        // Ensure the correct level button is marked active
+        document.querySelectorAll('#levels-list .level-btn.active').forEach(b => b.classList.remove('active'));
+        const levelButton = document.querySelector(`#levels-list .level-btn[data-level-id='${levelId}']`);
+        if (levelButton) {
+          levelButton.classList.add('active');
+        }
+        return; // Level loaded, exit
+      } else {
+        console.warn(`Level ID ${levelId} from hash is invalid, locked, or does not exist.`);
+        // Clear invalid hash to prevent loops or confusion
+        window.location.hash = ''; 
+      }
+    }
+  }
+  // If no valid level in hash, or level is locked/invalid, show welcome screen
+  showWelcomeScreen();
 }
 
 // Initialization
