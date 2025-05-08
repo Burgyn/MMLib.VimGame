@@ -1,19 +1,20 @@
-// Inicializácia Dexie.js pre IndexedDB
+// js/db.js
+// Initialize Dexie.js for IndexedDB
 const db = new Dexie('VimGameDB');
 db.version(1).stores({
   progress: 'id, currentLevelId, xp, badges, streak, lastPlayed',
-  settings: 'key, value' // Pre uloženie mena hráča a iných nastavení
+  settings: 'key, value' // For saving player name and other settings
 });
 
-// Uloženie progresu
+// Save progress
 async function saveUserProgress(progressData) {
   await db.progress.put({
-    id: 1, // Predpokladáme jedného hráča
+    id: 1, // Assuming one player
     ...progressData
   });
 }
 
-// Načítanie progresu
+// Load progress
 async function loadUserProgress() {
   return await db.progress.get(1);
 }
@@ -29,12 +30,12 @@ async function clearUserProgress() {
   }
 }
 
-// Uloženie nastavenia (napr. mena)
+// Save setting (e.g., name)
 async function saveSetting(key, value) {
   await db.settings.put({ key, value });
 }
 
-// Načítanie nastavenia
+// Load setting
 async function loadSetting(key) {
   const setting = await db.settings.get(key);
   return setting ? setting.value : undefined;

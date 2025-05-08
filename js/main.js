@@ -1,5 +1,7 @@
-// Načítanie levelov a zobrazenie zoznamu
-const levels = window.getVimLevels();
+// Load levels and display list - No longer needed as levels fetched async
+let chapters = []; 
+let allLevelsFlat = []; 
+
 const levelsListEl = document.getElementById('levels-list');
 const gameAreaEl = document.getElementById('game-area');
 const welcomeScreenEl = document.getElementById('welcome-screen');
@@ -12,21 +14,73 @@ const restartBtnEl = document.getElementById('restart-level');
 const nextBtnEl = document.getElementById('next-level');
 const playerNameDisplayEl = document.getElementById('player-name-display');
 const progressBarContainerEl = document.getElementById('progress-bar-container');
-const progressBarEl = document.querySelector('#progress-bar .bar'); // Assuming the actual bar is a child
+const progressBarEl = document.querySelector('#progress-bar .bar');
 const badgesContainerEl = document.getElementById('badges-container');
 const badgesEl = document.getElementById('badges');
 
+// Status Bar Elements
+const statusBarModeEl = document.getElementById('status-mode');
+const statusBarFileInfoEl = document.getElementById('status-file-info');
+const statusBarCursorPosEl = document.getElementById('status-cursor-pos');
+
+
+// Level Palette Modal Elements (Now disabled, explorer is primary)
+/*
+const levelPaletteModalEl = document.getElementById('level-palette-modal');
+const levelPaletteFilterEl = document.getElementById('level-palette-filter');
+const levelPaletteListEl = document.getElementById('level-palette-list');
+if (!levelPaletteModalEl || !levelPaletteFilterEl || !levelPaletteListEl) {
+  console.error("CRITICAL PALETTE ERROR: One or more level palette DOM elements were not found!");
+}
+*/
+
 let currentLevelData = null;
-let currentLines = []; // Aktuálny obsah editora ako pole riadkov
+let currentLines = []; // Current content of the editor as array of lines
 let currentCursorPos = { row: 0, col: 0 };
-let goalLines = [];    // Cieľový obsah editora ako pole riadkov
+let goalLines = [];    // Target content of the editor as array of lines
 let playerProgress = { currentLevelId: 1, xp: 0, badges: [], streak: 0, lastPlayed: null };
 let term;
 let fitAddon;
 
+// Helper function to flatten chapters into levels
+function flattenChaptersToLevels(chaptersData) {
+  let allLevels = [];
+  if (!Array.isArray(chaptersData)) return [];
+  chaptersData.forEach(chapter => {
+    if (chapter && Array.isArray(chapter.levels)) {
+        allLevels = allLevels.concat(chapter.levels);
+    }
+  });
+  return allLevels;
+}
+
+// Helper function to fetch level data
+async function loadLevelData() {
+  try {
+    const response = await fetch('levels.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    chapters = data; // Store fetched chapters
+    allLevelsFlat = flattenChaptersToLevels(chapters); // Flatten them
+    console.log("Level data loaded successfully:", chapters);
+    return true;
+  } catch (error) {
+    console.error("CRITICAL: Failed to load levels.json:", error);
+    levelsListEl.innerHTML = '<p style="color:var(--red);">Error: levels.json could not be loaded or parsed.</p>';
+    return false;
+  }
+}
+
 async function initializeGame() {
+  // Load level data first
+  const levelsLoaded = await loadLevelData();
+  if (!levelsLoaded) return; // Stop initialization if levels failed to load
+
+  // Load player name and progress
   const playerName = await window.vimgameDB.loadSetting('playerName');
-  const nameTextSpan = playerNameDisplayEl.querySelector('span'); // Získame vnútorný span
+  const nameTextSpan = playerNameDisplayEl.querySelector('span'); // Get the inner span
   if (playerName) {
     nameTextSpan.textContent = `${playerName}`;
   } else {
@@ -39,31 +93,27 @@ async function initializeGame() {
     playerProgress = progress;
   }
 
-  updatePlayerStatsUI(); // Display stats after loading
-
+  updatePlayerStatsUI();
   initializeTerminal();
-  renderLevelList();
-  handleHashChange(); // Check hash on initial load
-
-  // Optional: Listen for hash changes if user navigates with back/forward browser buttons
-  // window.addEventListener('hashchange', handleHashChange);
+  renderLevelExplorer(); // Render based on fetched data
+  handleHashChange(); 
 }
 
 async function promptForPlayerName(isInitial = false) {
   const currentName = await window.vimgameDB.loadSetting('playerName');
-  const nameTextSpan = playerNameDisplayEl.querySelector('span'); // Získame vnútorný span
+  const nameTextSpan = playerNameDisplayEl.querySelector('span'); // Get the inner span
   
   const swalOptions = {
-    title: isInitial ? 'Welcome to VimGame!' : 'Edit Your Name',
+    title: isInitial ? 'Welcome to Vim Dojo!' : 'Edit Your Name',
     input: 'text',
     inputValue: currentName || '',
     inputLabel: 'Enter your name',
     inputPlaceholder: 'Your name or nickname',
     confirmButtonText: 'Save',
-    showCancelButton: true, // Keep a way to close without action
+    showCancelButton: true,
     cancelButtonText: 'Cancel',
     inputValidator: (value) => {
-      if (!value && !swalOptions.willClose) { // Check only if not closing via deny/cancel
+      if (!value && !swalOptions.willClose) {
         return 'Name cannot be empty if saving!';
       }
       return null;
@@ -97,23 +147,23 @@ async function promptForPlayerName(isInitial = false) {
 
 function initializeTerminal() {
   term = new Terminal({
-    // cursorBlink: true, // Toto môžeme nechať, ak by náš softvérový kurzor mal blikať, alebo dať false.
-                      // Hardvérový kurzor aj tak skryjeme.
+    // cursorBlink: true, // We can leave this if we want our software cursor to blink, or set false.
+                      // We hide the hardware cursor anyway.
     fontFamily: "'Fira Code', monospace",
     fontSize: 15,
     theme: {
       background: '#11131C',
-      foreground: '#cad3f5',
-      // cursor: '#f9e2af', // Farba hardvérového kurzora Xterm.js - už nie je taká dôležitá
-      selectionBackground: '#494d64',
-      black: '#494d64',
+      foreground: '#cdd6f4', // Updated text color
+      // cursor: '#f9e2af', // Xterm.js hardware cursor color - not so important anymore
+      selectionBackground: '#45475a',
+      black: '#494d64', // Using older value for black, adjust if needed
       red: '#f38ba8',
       green: '#a6e3a1',
       yellow: '#f9e2af',
       blue: '#89b4fa',
       magenta: '#cba6f7',
       cyan: '#89dceb',
-      white: '#cad3f5',
+      white: '#cdd6f4', // Updated text color
       brightBlack: '#5b6078',
       brightRed: '#f38ba8',
       brightGreen: '#a6e3a1',
@@ -123,9 +173,9 @@ function initializeTerminal() {
       brightCyan: '#89dceb',
       brightWhite: '#bac2de',
     },
-    // cursorStyle: 'block', // Môžeme nastaviť aj štýl, ak by sme ho chceli vidieť, ale my ho skryjeme.
-    screenReaderMode: true, // Odporúčané pre lepšiu prístupnosť a manažment kurzora
-    convertEol: true, // Pre správne zaobchádzanie s koncami riadkov
+    // cursorStyle: 'block', // Could set style if we wanted to see it, but we hide it.
+    screenReaderMode: true, // Recommended for better accessibility and cursor management
+    convertEol: true, // For correct handling of line endings
   });
   fitAddon = new FitAddon.FitAddon();
   term.loadAddon(fitAddon);
@@ -141,18 +191,20 @@ function initializeTerminal() {
     }
   });
 
-  term.onKey(async ({ key, domEvent: e }) => {
-    console.log(`term.onKey: key pressed: ${key}`, e);
-
+  term.onKey(async ({ key, domEvent: e }) => { // e is domEvent here
+    console.log(`term.onKey: key: ${e.key}, ctrl: ${e.ctrlKey}, alt: ${e.altKey}, meta: ${e.metaKey}`);
     if (gameAreaEl.classList.contains('hidden') || !currentLevelData) {
         console.log('term.onKey: Exiting because game area is hidden or no current level data.');
         return;
     }
-
+    if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+        console.log("term.onKey: Ctrl+L detected, deferring to global handler and preventing terminal action.");
+        e.preventDefault(); 
+        return;
+    }
     console.log('term.onKey: Current level ID:', currentLevelData.id, 'Allowed commands:', currentLevelData.allowedCommands);
-
     const vimCommands = ['h', 'j', 'k', 'l', '0', '$', 'x'];
-    if (vimCommands.includes(key) || (key.length === 1 && key.match(/[a-zA-Z0-9]/) && !e.ctrlKey && !e.altKey && !e.metaKey) ) {
+    if ((vimCommands.includes(key) || (key.length === 1 && key.match(/[a-zA-Z0-9]/))) && !e.ctrlKey && !e.altKey && !e.metaKey ) {
         console.log('term.onKey: Key is a potential Vim command.');
         if (currentLevelData.allowedCommands && currentLevelData.allowedCommands.includes(key)) {
             console.log(`term.onKey: Command '${key}' is allowed for this level. Processing...`);
@@ -167,45 +219,114 @@ function initializeTerminal() {
             await checkLevelGoal();
         } else if (currentLevelData.allowedCommands && !currentLevelData.allowedCommands.includes(key)){
             console.log(`term.onKey: Command '${key}' is NOT allowed for this level.`);
-            term.write('\x07'); 
+            term.write('\x07'); // Bell sound
         } else {
-            console.log(`term.onKey: Key '${key}' was not in allowedCommands, or allowedCommands is undefined.`);
+            console.log(`term.onKey: Key '${key}' was not in allowedCommands list, or allowedCommands is undefined.`);
         }
     } else if (key === 'Escape') { 
         console.log('term.onKey: Escape key pressed.');
-        e.preventDefault(); // Reverted to simpler Escape handling in terminal
+        e.preventDefault(); // Prevent default browser actions
     } else {
         console.log(`term.onKey: Key '${key}' is not a designated Vim command or Escape. Ignoring.`);
     }
   });
 }
 
-function renderLevelList() {
-  levelsListEl.innerHTML = '';
-  levels.forEach((lvl) => {
-    const btn = document.createElement('button');
-    btn.className = 'level-btn';
-    btn.textContent = `${lvl.id}. ${lvl.title}`;
-    btn.tabIndex = 0;
-    btn.dataset.levelId = lvl.id;
+// --- Level Explorer Rendering & Logic ---
+function renderLevelExplorer() {
+  if (!levelsListEl || !chapters) return;
+  levelsListEl.innerHTML = ''; // Clear old list
 
-    if (lvl.id > playerProgress.currentLevelId) {
-      btn.classList.add('locked');
-      btn.disabled = true;
-    } else if (lvl.id < playerProgress.currentLevelId) {
-      btn.classList.add('completed');
-    }
+  chapters.forEach(chapter => {
+    const chapterDiv = document.createElement('div');
+    chapterDiv.className = 'chapter-item';
+    chapterDiv.dataset.chapterId = chapter.id;
+    if (chapter.isOpen === undefined) chapter.isOpen = true; // Default to open if not specified
+    if (chapter.isOpen) chapterDiv.classList.add('open');
 
-    btn.onclick = () => {
-      if (!btn.classList.contains('locked')) {
-        startLevel(lvl.id);
-        document.querySelectorAll('#levels-list .level-btn.active').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+    const chapterHeader = document.createElement('div');
+    chapterHeader.className = 'chapter-header';
+    chapterHeader.tabIndex = 0; // Make focusable
+    chapterHeader.innerHTML = `<span class="chapter-toggle-icon">${chapter.isOpen ? '▼' : '▶'}</span>${chapter.title}`;
+    chapterHeader.addEventListener('click', () => toggleChapter(chapter.id));
+    chapterHeader.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { // Space or Enter to toggle
+        e.preventDefault();
+        toggleChapter(chapter.id);
       }
-    };
-    btn.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') btn.click(); });
-    levelsListEl.appendChild(btn);
+    });
+
+    const levelsUl = document.createElement('ul');
+    levelsUl.className = 'levels-under-chapter';
+
+    chapter.levels.forEach(level => {
+      const levelLi = document.createElement('li');
+      const levelBtn = document.createElement('button');
+      levelBtn.className = 'level-btn';
+      levelBtn.dataset.levelId = level.id;
+      levelBtn.tabIndex = 0; // Make focusable
+      levelBtn.innerHTML = `<span class="level-icon"></span>${level.id}. ${level.title}`;
+
+      if (level.id > playerProgress.currentLevelId) {
+        levelBtn.classList.add('locked');
+        levelBtn.disabled = true;
+        levelBtn.title = "Level locked";
+      } else if (level.id < playerProgress.currentLevelId) {
+        levelBtn.classList.add('completed');
+      }
+      if (currentLevelData && level.id === currentLevelData.id) {
+        levelBtn.classList.add('active-level-item');
+      }
+
+      levelBtn.onclick = () => {
+        if (!levelBtn.classList.contains('locked')) {
+          startLevel(level.id);
+        }
+      };
+      // Enter key on button already handled by button default behavior if not disabled
+      // but we can add explicit keydown for consistency or if it were not a button
+      levelBtn.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !levelBtn.classList.contains('locked')) {
+             e.preventDefault(); // Prevent potential double action if it's a button
+             startLevel(level.id); 
+        }
+      });
+
+      levelLi.appendChild(levelBtn);
+      levelsUl.appendChild(levelLi);
+    });
+
+    chapterDiv.appendChild(chapterHeader);
+    chapterDiv.appendChild(levelsUl);
+    levelsListEl.appendChild(chapterDiv);
   });
+}
+
+function toggleChapter(chapterId) {
+  const chapterItem = levelsListEl.querySelector(`.chapter-item[data-chapter-id='${chapterId}']`);
+  if (chapterItem) {
+    chapterItem.classList.toggle('open');
+    const icon = chapterItem.querySelector('.chapter-toggle-icon');
+    const chapterData = chapters.find(c => c.id === chapterId);
+    if (chapterData) chapterData.isOpen = !chapterData.isOpen; // Update state model
+    if (icon) icon.textContent = chapterItem.classList.contains('open') ? '▼' : '▶';
+  }
+}
+
+function updateActiveLevelInExplorer(levelId) {
+  document.querySelectorAll('#levels-list .level-btn.active-level-item').forEach(btn => {
+    btn.classList.remove('active-level-item');
+  });
+  const newActiveButton = document.querySelector(`#levels-list .level-btn[data-level-id='${levelId}']`);
+  if (newActiveButton) {
+    newActiveButton.classList.add('active-level-item');
+    // Optionally, ensure its chapter is open
+    const chapterItem = newActiveButton.closest('.chapter-item');
+    if (chapterItem && !chapterItem.classList.contains('open')) {
+      toggleChapter(chapterItem.dataset.chapterId);
+    }
+    newActiveButton.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
 }
 
 function showWelcomeScreen() {
@@ -217,7 +338,7 @@ function showWelcomeScreen() {
 }
 
 function showGameArea() {
-  welcomeScreenEl.classList.add('hidden'); // Toto zabezpečí skrytie uvítacej obrazovky
+  welcomeScreenEl.classList.add('hidden'); // Ensure welcome screen is hidden
   gameAreaEl.classList.remove('hidden');
   // Show progress/badges when game area is shown
   updatePlayerStatsUI();
@@ -227,8 +348,11 @@ function showGameArea() {
 }
 
 async function startLevel(levelId) {
-  const level = levels.find(l => l.id === levelId);
-  if (!level) return;
+  const level = allLevelsFlat.find(l => l.id === levelId); // Use new flat list
+  if (!level) {
+      console.error(`Level with ID ${levelId} not found.`);
+      return;
+  }
   currentLevelData = level;
 
   showGameArea();
@@ -242,50 +366,51 @@ async function startLevel(levelId) {
   
   const startText = await fetchTextFile(currentLevelData.startTextFile);
   currentLines = startText.split('\n');
-  if (currentLines.length === 1 && currentLines[0] === '') currentLines = []; // Prázdny súbor
+  if (currentLines.length === 1 && currentLines[0] === '') currentLines = []; // Handle empty file
 
   const goalText = await fetchTextFile(currentLevelData.goalTextFile);
   goalLines = goalText.split('\n');
-  if (goalLines.length === 1 && goalLines[0] === '') goalLines = [];
+  if (goalLines.length === 1 && goalLines[0] === '') goalLines = []; // Handle empty file
   
-  currentCursorPos = { row: 0, col: 0 }; // Reset kurzoru na začiatok
-  if (level.startCursor) { // Ak level definuje štartovaciu pozíciu kurzora
+  currentCursorPos = { row: 0, col: 0 }; // Reset cursor to start
+  if (level.startCursor) { // If level defines a start cursor position
       currentCursorPos = { ...level.startCursor };
   }
   
   renderEditorContent();
   term.focus();
+  updateActiveLevelInExplorer(levelId);
+  updateStatusBar();
 }
 
 function renderEditorContent() {
-  term.write('\x1b[?25l'); // Skry hardvérový kurzor na začiatku renderovania
+  term.write('\x1b[?25l'); // Hide hardware cursor at the start of render
   term.reset(); 
   currentLines.forEach((line, rowIndex) => {
     let displayLine = '';
     for (let colIndex = 0; colIndex < line.length; colIndex++) {
       if (rowIndex === currentCursorPos.row && colIndex === currentCursorPos.col) {
-        displayLine += `\x1b[48;5;220m\x1b[38;5;232m${line[colIndex]}\x1b[0m`; // Žlté pozadie, tmavé písmo
+        displayLine += `\x1b[48;5;220m\x1b[38;5;232m${line[colIndex]}\x1b[0m`; // Yellow background, dark text
       } else {
         displayLine += line[colIndex];
       }
     }
     if (rowIndex === currentCursorPos.row && currentCursorPos.col === line.length) {
-        displayLine += `\x1b[48;5;220m\x1b[38;5;232m \x1b[0m`; // Žlté pozadie pre medzeru na konci
+        displayLine += `\x1b[48;5;220m\x1b[38;5;232m \x1b[0m`; // Yellow background for space at end of line
     }
     term.writeln(displayLine);
   });
 
   for (let i = currentLines.length; i <= currentCursorPos.row; i++) {
-    if (i === currentCursorPos.row && currentCursorPos.col === 0 && currentLines.length === i) { // Ak je to nový prázdny riadok, kde má byť kurzor
+    if (i === currentCursorPos.row && currentCursorPos.col === 0 && currentLines.length === i) { // If it's a new empty line where cursor should be
         term.writeln(`\x1b[48;5;220m\x1b[38;5;232m \x1b[0m`);
     } else {
-        term.writeln(''); 
+        term.writeln(''); // Empty line
     }
   }
   term.scrollToLine(currentCursorPos.row);
-  // Hardvérový kurzor by mal zostať skrytý vďaka `\x1b[?25l` na začiatku.
-  // Ak by sme ho chceli na chvíľu ukázať a potom skryť, museli by sme poslať `\x1b[?25h` a potom znova `\x1b[?25l`.
-  // Pre náš softvérový kurzor to nepotrebujeme.
+  // Hardware cursor should remain hidden thanks to `\x1b[?25l` at the start.
+  // For our software cursor, this isn't needed.
 }
 
 async function checkLevelGoal() {
@@ -310,21 +435,11 @@ async function checkLevelGoal() {
       spread: 100,
       origin: { y: 0.6 }
     });
-    if (currentLevelData.id === playerProgress.currentLevelId) {
-      playerProgress.currentLevelId++;
-      // Simple XP gain, can be more sophisticated
-      playerProgress.xp += 10; 
-      // Example: Add a badge every 5 levels completed (or 50 XP)
-      if (playerProgress.xp > 0 && playerProgress.xp % 50 === 0) {
-          const newBadgeId = `L${playerProgress.currentLevelId -1}`; // Badge for completing the level before increment
-          if (!playerProgress.badges.includes(newBadgeId)) {
-            playerProgress.badges.push(newBadgeId);
-          }
-      }
-      await window.vimgameDB.saveUserProgress(playerProgress);
-      renderLevelList();
-      updatePlayerStatsUI(); // Update UI after progress change
+    if (currentLevelData.id === playerProgress.currentLevelId -1) { // If currentLevelId was just incremented
+        renderLevelExplorer(); // Re-render to update completed/locked states
+        updatePlayerStatsUI();
     }
+    updateStatusBar();
   }
 }
 
@@ -339,121 +454,116 @@ restartBtnEl.onclick = () => {
 };
 
 nextBtnEl.onclick = () => {
-  const currentIdx = levels.findIndex(l => l.id === currentLevelData.id);
-  if (currentIdx !== -1 && currentIdx < levels.length - 1) {
-    const nextLevel = levels[currentIdx + 1];
-    if (nextLevel.id <= playerProgress.currentLevelId) { // Skontroluje, či je ďalší level odomknutý
+  const currentIdx = allLevelsFlat.findIndex(l => l.id === currentLevelData.id);
+  if (currentIdx !== -1 && currentIdx < allLevelsFlat.length - 1) {
+    const nextLevel = allLevelsFlat[currentIdx + 1];
+    if (nextLevel.id <= playerProgress.currentLevelId) { // Check if next level is unlocked
       startLevel(nextLevel.id);
       document.querySelectorAll('#levels-list .level-btn.active').forEach(b => b.classList.remove('active'));
       document.querySelector(`#levels-list .level-btn[data-level-id='${nextLevel.id}']`)?.classList.add('active');
     } else {
-      showWelcomeScreen(); // Ak nie, vrátime sa na úvod
+      showWelcomeScreen(); // If not, return to welcome screen
     }
   } else {
-    showWelcomeScreen(); // Koniec hry alebo posledný dostupný level
+    showWelcomeScreen(); // End of game or last available level
   }
 };
 
-// Ovládanie klávesnicou (výber levelu, hint, ...)
+// --- Status Bar Update Function ---
+function updateStatusBar() {
+  if (!currentLevelData) {
+    statusBarFileInfoEl.textContent = 'No Level Loaded';
+    statusBarCursorPosEl.textContent = '';
+    return;
+  }
+  statusBarFileInfoEl.textContent = `${currentLevelData.id}: ${currentLevelData.title}`;
+  if (currentCursorPos) {
+    statusBarCursorPosEl.textContent = `${currentCursorPos.row}:${currentCursorPos.col}`;
+  }
+  // statusBarModeEl can be updated later with Vim modes
+}
+
+// --- Keyboard Navigation for Explorer (and global shortcuts) ---
 document.addEventListener('keydown', e => {
-  // 1. Global shortcut: Ctrl+L to focus level list
+  // Ctrl+L to focus level explorer
   if (e.ctrlKey && e.key.toLowerCase() === 'l') {
-    e.preventDefault(); // Prevent browser default for Ctrl+L (e.g., open location bar)
-    console.log("Ctrl+L pressed. Attempting to focus level list.");
-    const firstUnlockedLevelButton = levelsListEl.querySelector('.level-btn:not(.locked)');
-    if (firstUnlockedLevelButton) {
-      console.log("Found first unlocked level button:", firstUnlockedLevelButton);
-      if (term && term.textarea && document.activeElement === term.textarea) {
-        console.log("Terminal was focused, blurring it before focusing level button.");
-        term.blur(); // Explicitly blur terminal if it's focused
-      }
-      firstUnlockedLevelButton.focus();
-      console.log("document.activeElement after focus attempt:", document.activeElement);
-      // Adding a slight delay to check if focus holds
-      setTimeout(() => {
-        console.log("document.activeElement 50ms after focus attempt:", document.activeElement);
-      }, 50);
-    } else {
-      console.log("No unlocked level button found to focus for Ctrl+L.");
+    e.preventDefault();
+    console.log("Ctrl+L pressed. Attempting to focus level explorer.");
+    const firstFocusable = levelsListEl.querySelector('.chapter-header, .level-btn:not(.locked)');
+    if (firstFocusable) {
+      firstFocusable.focus();
+      console.log("Focused explorer item:", firstFocusable);
     }
-    return; // Ctrl+L handled, stop further processing in this listener
+    return; 
   }
 
-  // 2. Hint shortcut: '?' (only if game area is active and not in a text input)
-  if (!gameAreaEl.classList.contains('hidden')) { // If game area is active
-    if (e.key === '?' && !e.ctrlKey && !e.altKey && !e.metaKey) {
-      if (!(document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
-         e.preventDefault();
-         showHintBtnEl.click();
-      }
+  // Handle keys if level explorer is focused (an item within #levels-list)
+  const activeElementInExplorer = document.activeElement.closest('#levels-list .chapter-header, #levels-list .level-btn');
+  if (activeElementInExplorer) {
+    const allFocusable = Array.from(levelsListEl.querySelectorAll('.chapter-header, .level-btn:not(.locked)'));
+    let currentIndex = allFocusable.findIndex(item => item === activeElementInExplorer);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      currentIndex = (currentIndex + 1) % allFocusable.length;
+      allFocusable[currentIndex]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      currentIndex = (currentIndex - 1 + allFocusable.length) % allFocusable.length;
+      allFocusable[currentIndex]?.focus();
+    } else if (e.key === 'Enter' || e.key === ' ') { // Space or Enter
+      // Let the item's own click/keydown handler deal with it (already set up in renderLevelExplorer)
+      // If it's a button, Space/Enter often trigger click by default.
+      // If it's a div (chapter-header), we added explicit handlers.
     }
-    // If game area is active and the terminal isn't the active element, 
-    // or if some other specific condition requires it, you might return here.
-    // For now, let it fall through to allow level list navigation if it got focus via Ctrl+L.
+    return; // Key handled by explorer navigation
   }
 
-  // 3. Arrow key navigation for level list
-  // This should only happen if:
-  //    a) The welcome screen is active (gameAreaEl is hidden)
-  //    OR
-  //    b) A level button in the sidebar currently has focus.
-  const isLevelButtonFocused = document.activeElement && document.activeElement.matches('#levels-list .level-btn');
-
-  if (gameAreaEl.classList.contains('hidden') || isLevelButtonFocused) {
-    const focusableLevelButtons = Array.from(levelsListEl.querySelectorAll('.level-btn:not(.locked)'));
-    if (focusableLevelButtons.length === 0) return; // No buttons to navigate
-
-    let currentIndex = focusableLevelButtons.findIndex(btn => btn === document.activeElement);
-
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault(); // Prevent default page scroll
-
-      if (e.key === 'ArrowDown') {
-        if (currentIndex === -1 || currentIndex === focusableLevelButtons.length - 1) {
-          currentIndex = 0; // If nothing or last is focused, go to first
-        } else {
-          currentIndex++;
-        }
-      } else { // ArrowUp
-        if (currentIndex === -1 || currentIndex === 0) {
-          currentIndex = focusableLevelButtons.length - 1; // If nothing or first is focused, go to last
-        } else {
-          currentIndex--;
-        }
-      }
-
-      if (focusableLevelButtons[currentIndex]) {
-        console.log("Arrow key: Attempting to focus:", focusableLevelButtons[currentIndex]);
-        focusableLevelButtons[currentIndex].focus();
-        console.log("Arrow key: document.activeElement is now:", document.activeElement);
-      } else {
-        console.warn("Arrow key: Could not find button at new index", currentIndex);
-      }
-    }
+  // Hint shortcut ('?') if game area is active
+  if (!gameAreaEl.classList.contains('hidden') && e.key === '?' /* ... and not in input ... */) {
+    // ... (hint logic)
   }
+  
+  // Terminal key processing (term.onKey) is separate and handles Vim commands
 });
 
-// Globálne premenné a funkcie pre fetchTextFile, atď., zostávajú podobné.
-function fetchTextFile(path) {
-  return fetch(path).then(r => r.text());
+// --- Hash Handling ---
+async function handleHashChange() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#/level/')) {
+    const levelIdStr = hash.substring('#/level/'.length);
+    const levelId = parseInt(levelIdStr, 10);
+
+    if (!isNaN(levelId) && allLevelsFlat.find(l => l.id === levelId)) {
+      // Check if level is unlocked before starting
+      const levelData = allLevelsFlat.find(l => l.id === levelId);
+      if (levelData && levelData.id <= playerProgress.currentLevelId) {
+        await startLevel(levelId); // This will also call updateActiveLevelInExplorer
+        return;
+      } else {
+        console.warn(`Level ID ${levelId} from hash is locked.`);
+        window.location.hash = ''; // Clear hash if level is locked
+      }
+    } else {
+        console.warn(`Level ID ${levelIdStr} from hash is invalid or not found.`);
+        window.location.hash = ''; 
+    }
+  }
+  showWelcomeScreen();
+  updateActiveLevelInExplorer(null); // Clear active level in explorer
+  updateStatusBar(); // Clear status bar file info
 }
 
 // New function to update and display progress bar and badges
 function updatePlayerStatsUI() {
-  if (!playerProgress) return;
-
-  // Update Progress Bar
-  if (progressBarEl && progressBarContainerEl) {
-    const totalLevels = levels.length;
-    const completedLevels = playerProgress.currentLevelId -1; // Assuming currentLevelId is the next level to play
-    const progressPercentage = totalLevels > 0 ? (completedLevels / totalLevels) * 100 : 0;
-    progressBarEl.style.width = `${Math.min(progressPercentage, 100)}%`;
-    progressBarContainerEl.classList.remove('hidden');
-    // Add tooltip to the progress bar container
-    progressBarContainerEl.title = `Progress: ${completedLevels} / ${totalLevels} levels completed (${Math.round(progressPercentage)}%)`;
-  } else {
-    console.warn('Progress bar elements not found.');
-  }
+  if (!playerProgress || !allLevelsFlat) return;
+  const totalLevels = allLevelsFlat.length;
+  const completedLevels = playerProgress.currentLevelId -1; // Assuming currentLevelId is the next level to play
+  const progressPercentage = totalLevels > 0 ? (completedLevels / totalLevels) * 100 : 0;
+  progressBarEl.style.width = `${Math.min(progressPercentage, 100)}%`;
+  progressBarContainerEl.classList.remove('hidden');
+  // Add tooltip to the progress bar container
+  progressBarContainerEl.title = `Progress: ${completedLevels} / ${totalLevels} levels completed (${Math.round(progressPercentage)}%)`;
 
   // Update Badges
   if (badgesEl && badgesContainerEl) {
@@ -482,8 +592,8 @@ async function handleResetProgress() {
     text: "This will reset all your progress and name. This action cannot be undone!",
     icon: 'warning',
     showCancelButton: true,
-    confirmButtonColor: 'var(--red)', // Use CSS variable for consistency
-    cancelButtonColor: 'var(--secondary-color)', // Use CSS variable for consistency
+    confirmButtonColor: 'var(--red)',
+    cancelButtonColor: 'var(--secondary-color)',
     confirmButtonText: 'Yes, reset it!',
     cancelButtonText: 'Cancel'
   });
@@ -498,7 +608,7 @@ async function handleResetProgress() {
         'Your progress has been successfully reset.',
         'success'
       ).then(() => {
-        window.location.reload(); // Reload the page to reflect changes
+        window.location.reload();
       });
     } catch (error) {
       console.error('Error during progress reset:', error);
@@ -511,35 +621,9 @@ async function handleResetProgress() {
   }
 }
 
-// New function to handle URL hash changes
-async function handleHashChange() {
-  const hash = window.location.hash;
-  if (hash.startsWith('#/level/')) {
-    const levelIdStr = hash.substring('#/level/'.length);
-    const levelId = parseInt(levelIdStr, 10);
-
-    if (!isNaN(levelId)) {
-      const levelExists = levels.some(l => l.id === levelId);
-      const isLevelUnlocked = playerProgress && levelId <= playerProgress.currentLevelId;
-
-      if (levelExists && isLevelUnlocked) {
-        await startLevel(levelId);
-        // Ensure the correct level button is marked active
-        document.querySelectorAll('#levels-list .level-btn.active').forEach(b => b.classList.remove('active'));
-        const levelButton = document.querySelector(`#levels-list .level-btn[data-level-id='${levelId}']`);
-        if (levelButton) {
-          levelButton.classList.add('active');
-        }
-        return; // Level loaded, exit
-      } else {
-        console.warn(`Level ID ${levelId} from hash is invalid, locked, or does not exist.`);
-        // Clear invalid hash to prevent loops or confusion
-        window.location.hash = ''; 
-      }
-    }
-  }
-  // If no valid level in hash, or level is locked/invalid, show welcome screen
-  showWelcomeScreen();
+// Globálne premenné a funkcie pre fetchTextFile, atď., zostávajú podobné.
+function fetchTextFile(path) {
+  return fetch(path).then(r => r.text());
 }
 
 // Initialization

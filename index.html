@@ -60,9 +60,18 @@
       </section>
     </main>
   </div>
-  <footer>
-    <span>© 2025 Burgyn</span>
+
+  <footer id="status-bar">
+    <div class="status-left">
+      <span id="status-mode" class="status-segment">NORMAL</span> 
+      <span id="status-file-info" class="status-segment"></span>
+    </div>
+    <div class="status-right">
+      <span id="status-cursor-pos" class="status-segment">0:0</span>
+      <span id="status-copyright" class="status-segment">© 2025 Burgyn</span>
+    </div>
   </footer>
+
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
@@ -70,7 +79,14 @@
   <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
   <script src="js/db.js"></script>
   <script src="js/vimcore.js"></script>
-  <script src="js/levels.js"></script>
   <script src="js/main.js"></script>
+
+  <!-- Level Selection Modal (Command Palette) -->
+  <div id="level-palette-modal" class="modal hidden">
+    <div class="modal-content">
+      <input type="text" id="level-palette-filter" placeholder="Filter levels...">
+      <ul id="level-palette-list"></ul>
+    </div>
+  </div>
 </body>
 </html> 
