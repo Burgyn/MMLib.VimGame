@@ -436,9 +436,16 @@ async function checkLevelGoal() {
       spread: 100,
       origin: { y: 0.6 }
     });
-    if (currentLevelData.id === playerProgress.currentLevelId -1) { // If currentLevelId was just incremented
-        renderLevelExplorer(); // Re-render to update completed/locked states
-        updatePlayerStatsUI();
+    if (currentLevelData.id === playerProgress.currentLevelId) {
+      playerProgress.currentLevelId++;
+      if (window.vimgameDB && window.vimgameDB.saveUserProgress) {
+        window.vimgameDB.saveUserProgress(playerProgress);
+      }
+      renderLevelExplorer();
+      updatePlayerStatsUI();
+    } else if (currentLevelData.id === playerProgress.currentLevelId - 1) {
+      renderLevelExplorer(); // Re-render to update completed/locked states
+      updatePlayerStatsUI();
     }
     updateStatusBar();
   }
