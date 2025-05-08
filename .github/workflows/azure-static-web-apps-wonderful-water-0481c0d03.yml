@@ -32,6 +32,8 @@ jobs:
           api_location: "" # Api source code path - optional
           output_location: "" # Built app content directory - optional
           ###### End of Repository/Build Configurations ######
+          app_build_command: "npm run build"
+          skip_app_build: "true"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -45,3 +47,4 @@ jobs:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_WATER_0481C0D03 }}
           action: "close"
           app_location: "/" # Add app_location
+          skip_app_build: "true"

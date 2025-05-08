@@ -4,7 +4,8 @@
   "description": "Vim tréningová hra v prehliadači",
   "scripts": {
     "start": "http-server -c-1 -o -p 8080",
-    "dev": "http-server -c-1 -o -p 8080"
+    "dev": "http-server -c-1 -o -p 8080",
+    "build": "echo 'No build required for static site.'"
   },
   "devDependencies": {
     "http-server": "^14.1.1"
