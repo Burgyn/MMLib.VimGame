@@ -795,6 +795,7 @@ function showAppHomeScreen() {
 function showHelpModal() {
   if (helpModalEl) {
     helpModalEl.classList.remove('hidden');
+    helpModalEl.focus(); // Set focus to the modal
   }
 }
 
@@ -896,6 +897,7 @@ function showProgressModal() {
       <p style="text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 0.5rem;">That's ${progressPercentage.toFixed(0)}% progress!</p>
     `;
     currentProgressModal.classList.remove('hidden');
+    currentProgressModal.focus(); // Set focus to the modal
   } else {
     console.error("Progress modal elements not found upon trying to show!");
     // For debugging, log what was found:
