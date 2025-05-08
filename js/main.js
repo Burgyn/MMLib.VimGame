@@ -13,8 +13,8 @@ const hintEl = document.getElementById('hint');
 const restartBtnEl = document.getElementById('restart-level');
 const nextBtnEl = document.getElementById('next-level');
 const playerNameDisplayEl = document.getElementById('player-name-display');
-const progressBarContainerEl = document.getElementById('progress-bar-container');
-const progressBarEl = document.querySelector('#progress-bar .bar');
+// const progressBarContainerEl = document.getElementById('progress-bar-container'); // REMOVED
+// const progressBarEl = document.querySelector('#progress-bar .bar'); // REMOVED
 const badgesContainerEl = document.getElementById('badges-container');
 const badgesEl = document.getElementById('badges');
 
@@ -684,10 +684,10 @@ function updatePlayerStatsUI() {
   const totalLevels = allLevelsFlat.length;
   const completedLevels = playerProgress.currentLevelId -1; // Assuming currentLevelId is the next level to play
   const progressPercentage = totalLevels > 0 ? (completedLevels / totalLevels) * 100 : 0;
-  progressBarEl.style.width = `${Math.min(progressPercentage, 100)}%`;
-  progressBarContainerEl.classList.remove('hidden');
+  // progressBarEl.style.width = `${Math.min(progressPercentage, 100)}%`; // REMOVED
+  // progressBarContainerEl.classList.remove('hidden'); // REMOVED
   // Add tooltip to the progress bar container
-  progressBarContainerEl.title = `Progress: ${completedLevels} / ${totalLevels} levels completed (${Math.round(progressPercentage)}%)`;
+  // progressBarContainerEl.title = `Progress: ${completedLevels} / ${totalLevels} levels completed (${Math.round(progressPercentage)}%)`; // REMOVED
 
   // Update status bar progress segment
   const statusBarProgressEl = document.getElementById('status-progress');
