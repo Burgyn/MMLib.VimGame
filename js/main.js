@@ -152,26 +152,27 @@ function initializeTerminal() {
     fontFamily: "'Fira Code', monospace",
     fontSize: 15,
     theme: {
-      background: '#11131C',
-      foreground: '#cdd6f4', // Updated text color
-      // cursor: '#f9e2af', // Xterm.js hardware cursor color - not so important anymore
-      selectionBackground: '#45475a',
-      black: '#494d64', // Using older value for black, adjust if needed
-      red: '#f38ba8',
-      green: '#a6e3a1',
-      yellow: '#f9e2af',
-      blue: '#89b4fa',
-      magenta: '#cba6f7',
-      cyan: '#89dceb',
-      white: '#cdd6f4', // Updated text color
-      brightBlack: '#5b6078',
-      brightRed: '#f38ba8',
-      brightGreen: '#a6e3a1',
-      brightYellow: '#f9e2af',
-      brightBlue: '#89b4fa',
-      brightMagenta: '#cba6f7',
-      brightCyan: '#89dceb',
-      brightWhite: '#bac2de',
+      background: '#1e1e2e', // Use the new background
+      foreground: '#f8f8f2', // Use the new text color
+      cursor: '#f8f8f2',     // Make cursor match text color (or choose an accent)
+      selectionBackground: '#44475a', // Use the new selection color
+      // Use new accent colors for ANSI colors
+      black: '#44475a', 
+      red: '#ff5555', 
+      green: '#50fa7b',
+      yellow: '#f1fa8c',
+      blue: '#bd93f9',    // Using purple for blue
+      magenta: '#ff79c6', // Pinkish magenta often used in these themes
+      cyan: '#8be9fd', 
+      white: '#f8f8f2',
+      brightBlack: '#6272a4',
+      brightRed: '#ff6e6e',
+      brightGreen: '#69ff94',
+      brightYellow: '#ffffa5',
+      brightBlue: '#d6acff',
+      brightMagenta: '#ff92df',
+      brightCyan: '#a4ffff',
+      brightWhite: '#ffffff',
     },
     // cursorStyle: 'block', // Could set style if we wanted to see it, but we hide it.
     screenReaderMode: true, // Recommended for better accessibility and cursor management
