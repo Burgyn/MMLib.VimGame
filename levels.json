@@ -6,30 +6,32 @@
     "levels": [
       {
         "id": 1, 
-        "title": "Move to Line Start",
+        "title": "Move to Line Start (0)",
         "description": "Move the cursor to the <strong>start</strong> of the current line.",
         "startTextFile": "levels/level1_start.txt",
         "goalTextFile": "levels/level1_goal.txt",
-        "verify": "cursor_at_start",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 0 },
         "allowedCommands": ["0", "h", "l"],
         "startCursor": { "row": 0, "col": 9 },
         "hint": "Use the <kbd>0</kbd> key to jump to the start of the line."
       },
       {
         "id": 2,
-        "title": "Move to Line End",
+        "title": "Move to Line End ($",
         "description": "Move the cursor to the <strong>end</strong> of the current line.",
         "startTextFile": "levels/level2_start.txt",
-        "goalTextFile": "levels/level2_goal.txt",
-        "verify": "cursor_at_end",
+        "goalTextFile": "levels/level2_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 25 },
         "allowedCommands": ["$", "h", "l"],
         "startCursor": { "row": 0, "col": 6 },
         "hint": "Use the <kbd>$</kbd> key to jump to the end of the line."
       },
       {
         "id": 3,
-        "title": "Move Up/Down",
-        "description": "Move the cursor to the line containing \"Second line\".",
+        "title": "Move Up/Down (j, k)",
+        "description": "Move the cursor from the first line to the line containing \"Second line\".",
         "startTextFile": "levels/level3_multiline_start.txt",
         "goalTextFile": "levels/level3_multiline_start.txt",
         "verify": "cursor_at_pos",
@@ -37,6 +39,90 @@
         "allowedCommands": ["j", "k", "h", "l", "0", "$"],
         "startCursor": { "row": 0, "col": 0 },
         "hint": "Use <kbd>j</kbd> to move down a line and <kbd>k</kbd> to move up."
+      },
+      {
+        "id": 4,
+        "title": "Next Word Start (w)",
+        "description": "The cursor is on 'T' in \"The\". Use <code>w</code> to move to the start of the word \"quick\".",
+        "startTextFile": "levels/level4_new_w_start.txt",
+        "goalTextFile": "levels/level4_new_w_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 4 },
+        "allowedCommands": ["w", "h", "l"],
+        "startCursor": { "row": 0, "col": 0 },
+        "hint": "Press <code>w</code> to move to the start of the next word."
+      },
+      {
+        "id": 5,
+        "title": "Go to First Line (gg)",
+        "description": "You are on the third line. Go to the first line using <code>gg</code>.",
+        "startTextFile": "levels/level5_start.txt",
+        "goalTextFile": "levels/level5_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 0 },
+        "allowedCommands": ["g", "h", "j", "k", "l"],
+        "startCursor": { "row": 2, "col": 0 },
+        "hint": "Press <code>g</code> twice (<code>gg</code>) to go to the first line of the file."
+      },
+      {
+        "id": 6,
+        "title": "Go to Last Line (G)",
+        "description": "You are on the second line. Go to the last line of this file using <code>G</code>.",
+        "startTextFile": "levels/level6_start.txt",
+        "goalTextFile": "levels/level6_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 2, "col": 0 },
+        "allowedCommands": ["G", "h", "j", "k", "l"],
+        "startCursor": { "row": 1, "col": 0 },
+        "hint": "Press <code>Shift+g</code> (which is <code>G</code>) to go to the last line of the file."
+      },
+      {
+        "id": 7,
+        "title": "Counted Movement Down (3j)",
+        "description": "Move down 3 lines from \"Line one\" to reach \"Line four\" using a count with <code>j</code>.",
+        "startTextFile": "levels/level7_start.txt",
+        "goalTextFile": "levels/level7_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 3, "col": 0 },
+        "allowedCommands": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "j", "h", "l", "k"],
+        "startCursor": { "row": 0, "col": 0 },
+        "hint": "Type <code>3</code> then <code>j</code> (<code>3j</code>) to move down 3 lines."
+      },
+      {
+        "id": 8,
+        "title": "Previous Word Start (b)",
+        "description": "Cursor is on 'b' in \"brown\". Use <code>b</code> to move to the start of the word \"quick\".",
+        "startTextFile": "levels/level8_new_b_start.txt",
+        "goalTextFile": "levels/level8_new_b_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 4 },
+        "allowedCommands": ["b", "h", "l"],
+        "startCursor": { "row": 0, "col": 10 },
+        "hint": "Press <code>b</code> to move to the start of the previous word."
+      },
+      {
+        "id": 9,
+        "title": "Next Word End (e)",
+        "description": "Cursor is on 'q' in \"quick\". Use <code>e</code> to move to the end of \"quick\" (the 'k').",
+        "startTextFile": "levels/level9_new_e_start.txt",
+        "goalTextFile": "levels/level9_new_e_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 8 },
+        "allowedCommands": ["e", "h", "l"],
+        "startCursor": { "row": 0, "col": 4 },
+        "hint": "Press <code>e</code> to move to the end of the current or next word."
+      },
+      {
+        "id": 10,
+        "title": "Counted Word Forward (2w)",
+        "description": "From \"The\", move forward two words to land on \"brown\" using <code>2w</code>.",
+        "startTextFile": "levels/level10_new_2w_start.txt",
+        "goalTextFile": "levels/level10_new_2w_start.txt",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 10 },
+        "allowedCommands": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "w", "h", "l"],
+        "startCursor": { "row": 0, "col": 0 },
+        "hint": "Type <code>2</code> then <code>w</code> (<code>2w</code>) to jump forward two words."
       }
     ]
   },
@@ -46,7 +132,7 @@
     "isOpen": true,
     "levels": [
       {
-        "id": 4, 
+        "id": 11,
         "title": "Delete Character (x)",
         "description": "Delete the letter 'X' from the word \"teXt\". The cursor starts on 'X'.",
         "startTextFile": "levels/level4_delete_char_start.txt",

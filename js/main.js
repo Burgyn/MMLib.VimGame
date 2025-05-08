@@ -312,45 +312,84 @@ function initializeTerminal() {
   });
 
   term.onKey(async ({ key, domEvent: e }) => { // e is domEvent here
-    console.log(`term.onKey: key: ${e.key}, ctrl: ${e.ctrlKey}, alt: ${e.altKey}, meta: ${e.metaKey}`);
+    console.log(`term.onKey: key: ${e.key}, ctrl: ${e.ctrlKey}, alt: ${e.altKey}, meta: ${e.metaKey}, shift: ${e.shiftKey}`); // Added shiftKey
     if (gameAreaEl.classList.contains('hidden') || !currentLevelData) {
         console.log('term.onKey: Exiting because game area is hidden or no current level data.');
         return;
     }
-    if (e.ctrlKey && e.key.toLowerCase() === 'l') {
-        console.log("term.onKey: Ctrl+L detected, deferring to global handler and preventing terminal action.");
-        e.preventDefault(); 
+    // Prevent Vim processing if a modifier (Ctrl, Alt, Meta) is pressed, unless it's a specifically allowed combo (none for now in this part)
+    // Shift is allowed for typing characters like '$', 'G', etc.
+    if ((e.ctrlKey || e.altKey || e.metaKey) /* && !isAllowedCtrlAltMetaCombo */ ) {
+        console.log('term.onKey: Ctrl, Alt, or Meta pressed, not processing as Vim command here.');
         return;
     }
-    console.log('term.onKey: Current level ID:', currentLevelData.id, 'Allowed commands:', currentLevelData.allowedCommands);
-    const vimCommands = ['h', 'j', 'k', 'l', '0', '$', 'x'];
-    if ((vimCommands.includes(key) || (key.length === 1 && key.match(/[a-zA-Z0-9]/))) && !e.ctrlKey && !e.altKey && !e.metaKey ) {
-        console.log('term.onKey: Key is a potential Vim command.');
-        if (currentLevelData.allowedCommands && currentLevelData.allowedCommands.includes(key)) {
-            console.log(`term.onKey: Command '${key}' is allowed for this level. Processing...`);
-            e.preventDefault(); 
-            
-            const result = window.vimcore.processInput(key, currentLines, currentCursorPos);
-            currentLines = result.lines;
-            currentCursorPos = result.cursor;
-            
-            renderEditorContent(); 
-            updateStatusBar();
-            
-            console.log('term.onKey: About to call checkLevelGoal.');
-            await checkLevelGoal();
-        } else if (currentLevelData.allowedCommands && !currentLevelData.allowedCommands.includes(key)){
-            console.log(`term.onKey: Command '${key}' is NOT allowed for this level.`);
-            term.write('\x07'); // Bell sound
+
+    let vimKey = key;
+    if (e.key.length > 1) { // Handle special keys like 'Escape', 'ArrowLeft', etc.
+        if (e.key === 'Escape') vimKey = 'Escape';
+        // Potentially map other special keys if needed, or ignore them for Vim command processing
+        else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+            // These are often remapped or handled by Vim, but for now, let's see if basic Vim keys cover them
+            // If these need to map to h,j,k,l,0,$ we can do that here or ensure Vimcore handles them if sent directly.
+            // For now, we assume they are not Vim commands unless explicitly mapped.
+            console.log(`term.onKey: Special key ${e.key} pressed, not treating as simple Vim command.`);
+            // return; // Decide if these should be ignored or mapped
         } else {
-            console.log(`term.onKey: Key '${key}' was not in allowedCommands list, or allowedCommands is undefined.`);
+             // Other special keys like F1-F12, Tab, Enter etc.
+             console.log(`term.onKey: Special key ${e.key} pressed, not treating as simple Vim command.`);
+             // return; // Usually ignored unless specifically mapped
         }
-    } else if (key === 'Escape') { 
-        console.log('term.onKey: Escape key pressed.');
-        e.preventDefault(); // Prevent default browser actions
-    } else {
-        console.log(`term.onKey: Key '${key}' is not a designated Vim command or Escape. Ignoring.`);
+    } else if (e.shiftKey) {
+        // If shift is pressed with a letter, it produces an uppercase letter (e.g., Shift + g = G)
+        // This is fine, 'G' is a valid Vim command. '$' is Shift+4 on US keyboards.
+        // No special handling needed here for Shift + letter, as `key` will be the correct character.
     }
+
+    // Basic handling for 'gg' - can be improved with a slight delay if needed
+    if (window.vimcore.lastChar === 'g' && vimKey === 'g') {
+        window.vimcore.lastChar = null; // Reset after detecting gg
+        vimKey = 'gg';
+    } else if (vimKey === 'g') {
+        window.vimcore.lastChar = 'g';
+        // Don't process 'g' immediately, wait for next key. If next key is not 'g',
+        // then the single 'g' will be processed (which does nothing currently but resets count).
+        // This means single 'g' as a prefix for other commands (like 'ge', 'gt') is not yet supported well.
+        // For now, if user types 'g' then something else, the 'g' effectively gets eaten by count reset, 
+        // and then the next command is processed. This is a simplification.
+        console.log("term.onKey: 'g' pressed, waiting for potential second 'g'.");
+        return; // Wait for the next key
+    } else {
+        window.vimcore.lastChar = null; // Not 'g', so reset any pending 'g' state
+    }
+    
+    const result = window.vimcore.processInput(vimKey, currentLines, currentCursorPos);
+
+    if (result.commandProcessed) {
+        currentLines = result.lines;
+        currentCursorPos = result.cursor;
+        
+        renderEditorContent(); 
+        updateStatusBar();
+        
+        // Check level goal only if a command was processed that could affect it
+        await checkLevelGoal(); 
+    } else {
+        // Count was updated, or a multi-key sequence is in progress (like the first 'g').
+        // Do not re-render or check goal yet.
+        console.log('term.onKey: Vimcore updated count or is waiting for multi-key cmd. No re-render.');
+    }
+
+    // This was old logic for allowed commands check, vimcore now handles this implicitly.
+    /*
+    if (currentLevelData.allowedCommands && currentLevelData.allowedCommands.includes(vimKey)) {
+        // ... processing ...
+    } else if (currentLevelData.allowedCommands && !currentLevelData.allowedCommands.includes(vimKey)){
+        console.log(`term.onKey: Command '${vimKey}' is NOT allowed for this level.`);
+        term.write('\x07'); // Bell sound
+    } else {
+        console.log(`term.onKey: Key '${vimKey}' was not in allowedCommands list, or allowedCommands is undefined.`);
+    }
+    */
   });
 }
 

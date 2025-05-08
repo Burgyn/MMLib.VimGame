@@ -1,0 +1,3 @@
+First line.
+Cursor is on the second line.
+This is the third and final line. 
