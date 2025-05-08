@@ -254,15 +254,15 @@ header {
 }
 
 #levels-list .level-btn:hover {
-  background-color: transparent; /* No hover background */
+  background-color: #232336 !important;
   color: var(--text-color);
 }
 
 #levels-list .level-btn:focus {
-  outline: none; /* Remove default outline */
-  background-color: var(--selection-bg);
-  border: 1px solid var(--focus-border);
-  color: var(--text-color); 
+  background-color: #232336 !important;
+  color: var(--text-color);
+  outline: none;
+  border-left: 3px solid var(--primary-color);
 }
 
 #levels-list .level-btn.active-level-item {
@@ -698,14 +698,15 @@ footer {
 }
 
 #levels-list .level-btn:hover {
-  background-color: var(--border-color);
+  background-color: #232336 !important;
   color: var(--text-color);
 }
 
 #levels-list .level-btn:focus {
-  outline: 1px solid var(--yellow);
-  background-color: var(--border-color);
+  background-color: #232336 !important;
   color: var(--text-color);
+  outline: none;
+  border-left: 3px solid var(--primary-color);
 }
 
 #levels-list .level-btn.active-level-item {
