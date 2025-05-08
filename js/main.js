@@ -195,6 +195,12 @@ async function initializeGame() {
         event.preventDefault(); // Prevent potential further handling
         return;
       }
+      if (key === 'q') {
+        console.log("Global 'q' key pressed for Quit/Go Home");
+        window.location.hash = ''; // Navigate to home
+        event.preventDefault();
+        return;
+      }
     }
 
     // --- Home Screen Specific Shortcuts (if home is visible and no modals) ---
@@ -839,6 +845,9 @@ function setupSplashScreenMenuActions() {
           break;
         case 'help':
           showHelpModal(); // This should now work correctly
+          break;
+        case 'quit':
+          window.location.hash = ''; // Navigate to home
           break;
         default:
           console.warn(`Unknown splash menu action: ${actionText}`);
