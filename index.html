@@ -16,7 +16,7 @@
   <header>
     <div class="header-left">
       <img src="https://raw.githubusercontent.com/Burgyn/burgyn.github.io/refs/heads/master/assets/favicon-128x128.png" alt="App Logo" id="app-logo">
-      <h1>Vim Dojo</h1>
+      <h1 id="main-title-header">Vim Dojo</h1>
     </div>
     <div class="header-right">
       <div class="player-profile">
@@ -39,9 +39,27 @@
     </aside>
     <main id="main-content-area">
       <section id="welcome-screen">
-        <h2>Welcome to Vim Dojo!</h2>
-        <p>Select a level from the left panel and start your journey to Vim mastery.</p>
-        <p>You can control the game with your keyboard. Use arrow keys to navigate levels and Enter to select.</p>
+        <div class="neovim-splash">
+          <div class="splash-title-container">
+            <pre id="splash-title-art">
+ ██╗   ██╗██╗███╗   ███╗    ██████╗  ██████╗ ██╗ ██████╗ 
+ ██║   ██║██║████╗ ████║    ██╔══██╗██╔═══██╗██║██╔═══██╗
+ ██║   ██║██║██╔████╔██║    ██║  ██║██║   ██║██║██║   ██║
+ ╚██╗ ██╔╝██║██║╚██╔╝██║    ██║  ██║██║   ██║██║██║   ██║
+  ╚████╔╝ ██║██║ ╚═╝ ██║    ██████╔╝╚██████╔╝██║╚██████╔╝
+   ╚═══╝  ╚═╝╚═╝     ╚═╝    ╚═════╝  ╚═════╝ ╚═╝ ╚═════╝ 
+            </pre>
+            <div class="splash-subtitle">Become a Vim Ninja!</div>
+          </div>
+          <ul class="splash-menu">
+            <li><i class="fas fa-play-circle"></i><span>Start Learning</span><span class="keybind">s</span></li>
+            <li><i class="fas fa-list-ul"></i><span>Select Level</span><span class="keybind">l</span></li>
+            <li><i class="fas fa-question-circle"></i><span>Help</span><span class="keybind">h</span></li>
+          </ul>
+          <div class="splash-footer">
+            <span><i class="fas fa-bolt"></i> <span id="splash-completed-levels">0</span>/<span id="splash-total-levels">0</span> levels completed</span>
+          </div>
+        </div>
       </section>
       <section id="game-area" class="hidden">
         <div id="level-header-row">
@@ -90,6 +108,36 @@
     <div class="modal-content">
       <input type="text" id="level-palette-filter" placeholder="Filter levels...">
       <ul id="level-palette-list"></ul>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="close-help-modal" class="modal-close-btn">&times;</button>
+      <h2>Vim Dojo Help</h2>
+      <div id="help-modal-content">
+        <h4>Application Shortcuts:</h4>
+        <ul>
+          <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> - Focus Level Explorer</li>
+          <li><kbd>?</kbd> (in game) - Show Level Hint</li>
+        </ul>
+        <h4>Basic Vim Navigation:</h4>
+        <ul>
+          <li><kbd>h</kbd> - Move cursor left</li>
+          <li><kbd>j</kbd> - Move cursor down</li>
+          <li><kbd>k</kbd> - Move cursor up</li>
+          <li><kbd>l</kbd> - Move cursor right</li>
+          <li><kbd>0</kbd> - Move cursor to start of line</li>
+          <li><kbd>$</kbd> - Move cursor to end of line</li>
+        </ul>
+        <h4>Basic Vim Editing (Examples):</h4>
+        <ul>
+          <li><kbd>x</kbd> - Delete character under cursor</li>
+          <!-- Add more as they are introduced in levels -->
+        </ul>
+        <p>More shortcuts will be added as you progress through the levels!</p>
+      </div>
     </div>
   </div>
 </body>

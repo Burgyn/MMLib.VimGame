@@ -17,6 +17,7 @@ const progressBarContainerEl = document.getElementById('progress-bar-container')
 const progressBarEl = document.querySelector('#progress-bar .bar');
 const badgesContainerEl = document.getElementById('badges-container');
 const badgesEl = document.getElementById('badges');
+const mainTitleHeaderEl = document.getElementById('main-title-header'); // Added for home screen navigation
 
 // Status Bar Elements
 const statusBarModeEl = document.getElementById('status-mode');
@@ -24,6 +25,13 @@ const statusBarFileInfoEl = document.getElementById('status-file-info');
 const statusBarCursorPosEl = document.getElementById('status-cursor-pos');
 const statusTimeEl = document.getElementById('status-time');
 
+// Help Modal Elements
+const helpModalEl = document.getElementById('help-modal');
+const closeHelpModalBtnEl = document.getElementById('close-help-modal');
+
+// Splash Screen Footer Elements for Stats
+const splashCompletedLevelsEl = document.getElementById('splash-completed-levels');
+const splashTotalLevelsEl = document.getElementById('splash-total-levels');
 
 // Level Palette Modal Elements (Now disabled, explorer is primary)
 /*
@@ -95,9 +103,39 @@ async function initializeGame() {
   }
 
   updatePlayerStatsUI();
+  updateSplashFooterStats();
   initializeTerminal();
   renderLevelExplorer(); // Render based on fetched data
-  handleHashChange(); 
+  handleHashChange(); // This will now potentially show home screen by default
+  
+  // Add event listener for the main header title
+  if (mainTitleHeaderEl) {
+    mainTitleHeaderEl.addEventListener('click', () => {
+      window.location.hash = '#/home';
+      // showAppHomeScreen(); // handleHashChange will take care of this
+    });
+  }
+
+  // Add event listeners for splash menu items
+  setupSplashScreenMenuActions();
+
+  // Add event listener for help modal close button
+  if (closeHelpModalBtnEl) {
+    closeHelpModalBtnEl.addEventListener('click', hideHelpModal);
+  }
+  // Optional: Close modal on Escape key or click outside
+  if (helpModalEl) {
+    helpModalEl.addEventListener('click', (event) => {
+      if (event.target === helpModalEl) { // Clicked on backdrop
+        hideHelpModal();
+      }
+    });
+  }
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && helpModalEl && !helpModalEl.classList.contains('hidden')) {
+      hideHelpModal();
+    }
+  });
 }
 
 async function promptForPlayerName(isInitial = false) {
@@ -543,28 +581,27 @@ document.addEventListener('keydown', e => {
 // --- Hash Handling ---
 async function handleHashChange() {
   const hash = window.location.hash;
-  if (hash.startsWith('#/level/')) {
-    const levelIdStr = hash.substring('#/level/'.length);
-    const levelId = parseInt(levelIdStr, 10);
+  console.log('Hash changed to:', hash);
 
-    if (!isNaN(levelId) && allLevelsFlat.find(l => l.id === levelId)) {
-      // Check if level is unlocked before starting
-      const levelData = allLevelsFlat.find(l => l.id === levelId);
-      if (levelData && levelData.id <= playerProgress.currentLevelId) {
-        await startLevel(levelId); // This will also call updateActiveLevelInExplorer
-        return;
-      } else {
-        console.warn(`Level ID ${levelId} from hash is locked.`);
-        window.location.hash = ''; // Clear hash if level is locked
-      }
+  if (hash.startsWith('#/level/')) {
+    const levelId = parseInt(hash.substring(8), 10);
+    const levelExists = allLevelsFlat.some(l => l.id === levelId);
+    if (levelExists) {
+      await startLevel(levelId);
     } else {
-        console.warn(`Level ID ${levelIdStr} from hash is invalid or not found.`);
-        window.location.hash = ''; 
+      console.warn(`Level with ID ${levelId} not found from hash. Showing home.`);
+      window.location.hash = '#/home'; // Fallback to home
+      showAppHomeScreen();
     }
+  } else if (hash === '#/home' || hash === '') { // Show home on #/home or empty hash
+    showAppHomeScreen();
+  } else {
+    // Fallback for any other unknown hash: show home screen.
+    // Or, if there was a default level to start, handle that.
+    // For now, defaulting to home.
+    console.log('Unknown hash, showing home screen.');
+    showAppHomeScreen();
   }
-  showWelcomeScreen();
-  updateActiveLevelInExplorer(null); // Clear active level in explorer
-  updateStatusBar(); // Clear status bar file info
 }
 
 // New function to update and display progress bar and badges
@@ -658,4 +695,80 @@ function updateStatusTime() {
   el.textContent = `${h}:${m}:${s}`;
 }
 setInterval(updateStatusTime, 1000);
-document.addEventListener('DOMContentLoaded', updateStatusTime); 
+document.addEventListener('DOMContentLoaded', updateStatusTime);
+
+// NEW FUNCTION to show the main application home screen (Neovim-style splash)
+function showAppHomeScreen() {
+  console.log("Showing App Home Screen");
+  if (gameAreaEl) gameAreaEl.classList.add('hidden');
+  if (welcomeScreenEl) welcomeScreenEl.classList.remove('hidden');
+  // Ensure terminal is not focused or active if applicable
+  if (term) term.blur();
+  // Clear level specific info from status bar if needed
+  if (statusBarFileInfoEl) statusBarFileInfoEl.textContent = 'Vim Dojo';
+  if (statusBarCursorPosEl) statusBarCursorPosEl.textContent = '';
+}
+
+// NEW functions for Help Modal
+function showHelpModal() {
+  if (helpModalEl) {
+    helpModalEl.classList.remove('hidden');
+  }
+}
+
+function hideHelpModal() {
+  if (helpModalEl) {
+    helpModalEl.classList.add('hidden');
+  }
+}
+
+// NEW function to update splash screen footer stats
+function updateSplashFooterStats() {
+  if (!playerProgress || !allLevelsFlat || !splashCompletedLevelsEl || !splashTotalLevelsEl) {
+    // Set to default or error state if data not ready
+    if(splashCompletedLevelsEl) splashCompletedLevelsEl.textContent = '-';
+    if(splashTotalLevelsEl) splashTotalLevelsEl.textContent = '-';
+    return;
+  }
+  const totalLevels = allLevelsFlat.length;
+  // currentLevelId is the ID of the *next* level to be played.
+  // So, completed levels are currentLevelId - 1, but ensure it's not negative if currentLevelId is 1 (or 0 if no progress yet).
+  const completedCount = Math.max(0, (playerProgress.currentLevelId || 1) - 1);
+  
+  splashCompletedLevelsEl.textContent = completedCount;
+  splashTotalLevelsEl.textContent = totalLevels;
+}
+
+function setupSplashScreenMenuActions() {
+  const menuItems = document.querySelectorAll('.splash-menu li');
+  menuItems.forEach(item => {
+    const actionTextElement = item.querySelector('span');
+    if (!actionTextElement) return; // Skip if structure is unexpected
+    const actionText = actionTextElement.textContent.toLowerCase();
+    // const keybind = item.querySelector('.keybind').textContent;
+
+    item.addEventListener('click', () => {
+      // console.log(`Splash menu item clicked: ${actionText} (key: ${keybind})`);
+
+      switch (actionText) {
+        case 'start learning':
+          // Start the next level the player is supposed to play (currentLevelId)
+          // or the first level if no progress yet.
+          const targetLevelId = playerProgress.currentLevelId || (allLevelsFlat.length > 0 ? allLevelsFlat[0].id : 1);
+          window.location.hash = `#/level/${targetLevelId}`;
+          break;
+        case 'select level':
+          const firstLevelButton = levelsListEl.querySelector('.level-btn:not(.locked), .chapter-header');
+          if (firstLevelButton) {
+            firstLevelButton.focus();
+          }
+          break;
+        case 'help':
+          showHelpModal();
+          break;
+        default:
+          console.warn(`Unknown splash menu action: ${actionText}`);
+      }
+    });
+  });
+} 

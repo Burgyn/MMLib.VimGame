@@ -334,13 +334,96 @@ header {
 }
 
 #welcome-screen p {
-  font-size: 1.1rem;
-  margin-bottom: 0.8rem;
-  max-width: 600px;
+  margin-bottom: 1rem;
+  color: var(--text-color-muted);
 }
 
 #welcome-screen.hidden {
-    display: none;
+  display: none;
+}
+
+/* New Neovim Splash Screen Styles */
+.neovim-splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--background-color); /* Should match editor bg */
+}
+
+.splash-title-container {
+  margin-bottom: 2.5rem;
+}
+
+#splash-title-art {
+  font-family: 'Fira Code', 'JetBrains Mono', monospace; /* Monospaced font for ASCII art */
+  font-size: 1.5rem; /* Adjust size as needed */
+  line-height: 1.1;
+  color: var(--primary-color); /* Use primary accent for the title */
+  text-shadow: 1px 1px 0px var(--surface-color), /* Outer shadow */
+               2px 2px 0px var(--border-color); /* Deeper shadow for block effect */
+  margin-bottom: 0.5rem;
+  white-space: pre;
+}
+
+.splash-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-color-muted);
+  margin-top: 0.5rem;
+}
+
+.splash-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  max-width: 500px; /* Limit width of the menu */
+}
+
+.splash-menu li {
+  display: flex;
+  align-items: center;
+  font-size: 1rem; /* Slightly larger than explorer */
+  color: var(--text-color);
+  padding: 0.6rem 1rem;
+  margin-bottom: 0.3rem;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+
+.splash-menu li:hover {
+  background-color: var(--surface-color); /* Use surface for hover */
+}
+
+.splash-menu li i {
+  margin-right: 1.5rem; /* More space for icon */
+  color: var(--secondary-color); /* Accent for icons */
+  width: 20px; /* Align text nicely */
+  text-align: center;
+}
+
+.splash-menu li .keybind {
+  margin-left: auto;
+  color: var(--yellow); /* Yellow for keybinds, like Neovim */
+  font-weight: bold;
+  padding: 0.2rem 0.5rem;
+  background-color: rgba(241, 250, 140, 0.1); /* Subtle background for keybind */
+  border-radius: 3px;
+}
+
+.splash-footer {
+  margin-top: 2.5rem;
+  font-size: 0.85rem;
+  color: var(--text-color-muted);
+}
+
+.splash-footer i {
+  color: var(--primary-color);
+  margin-right: 0.3rem;
 }
 
 #game-area {
@@ -848,4 +931,69 @@ footer {
 /* Hide old command palette modal */
 #level-palette-modal {
     display: none !important; 
+}
+
+/* Help Modal Styles */
+#help-modal .modal-content {
+  width: 90%;
+  max-width: 600px; /* Slightly wider for more content */
+  padding: 20px;
+  text-align: left;
+}
+
+#help-modal h2 {
+  color: var(--primary-color);
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+#help-modal h4 {
+  color: var(--secondary-color);
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.3rem;
+}
+
+#help-modal ul {
+  list-style: none;
+  padding-left: 0.5rem;
+}
+
+#help-modal li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+#help-modal kbd {
+  /* Style for kbd tags in help, inherits from global kbd but can be tweaked */
+  background-color: var(--border-color); /* Ensure consistency */
+  margin: 0 0.1em;
+  padding: 0.2em 0.5em;
+}
+
+#help-modal-content p {
+  margin-top: 1.5rem;
+  color: var(--text-color-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: var(--text-color-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  color: var(--primary-color);
 } 
