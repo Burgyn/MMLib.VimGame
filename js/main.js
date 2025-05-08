@@ -11,6 +11,10 @@ const hintEl = document.getElementById('hint');
 const restartBtnEl = document.getElementById('restart-level');
 const nextBtnEl = document.getElementById('next-level');
 const playerNameDisplayEl = document.getElementById('player-name-display');
+const progressBarContainerEl = document.getElementById('progress-bar-container');
+const progressBarEl = document.querySelector('#progress-bar .bar'); // Assuming the actual bar is a child
+const badgesContainerEl = document.getElementById('badges-container');
+const badgesEl = document.getElementById('badges');
 
 let currentLevelData = null;
 let currentLines = []; // Aktuálny obsah editora ako pole riadkov
@@ -35,6 +39,8 @@ async function initializeGame() {
     playerProgress = progress;
   }
 
+  updatePlayerStatsUI(); // Display stats after loading
+
   initializeTerminal();
   renderLevelList();
   showWelcomeScreen(); // Zobrazí uvítaciu obrazovku na začiatku
@@ -43,29 +49,46 @@ async function initializeGame() {
 async function promptForPlayerName(isInitial = false) {
   const currentName = await window.vimgameDB.loadSetting('playerName');
   const nameTextSpan = playerNameDisplayEl.querySelector('span'); // Získame vnútorný span
-  const { value: name } = await Swal.fire({
-    title: isInitial ? 'Welcome to VimGame!' : 'Edit Your Name', // Preklad
+  
+  const swalOptions = {
+    title: isInitial ? 'Welcome to VimGame!' : 'Edit Your Name',
     input: 'text',
     inputValue: currentName || '',
-    inputLabel: 'Enter your name', // Preklad
-    inputPlaceholder: 'Your name or nickname', // Preklad
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    confirmButtonText: 'Save', // Preklad
+    inputLabel: 'Enter your name',
+    inputPlaceholder: 'Your name or nickname',
+    confirmButtonText: 'Save',
+    showCancelButton: true, // Keep a way to close without action
+    cancelButtonText: 'Cancel',
     inputValidator: (value) => {
-      if (!value) {
-        return 'Name cannot be empty!' // Preklad
+      if (!value && !swalOptions.willClose) { // Check only if not closing via deny/cancel
+        return 'Name cannot be empty if saving!';
       }
+      return null;
     }
-  });
-  if (name) {
-    await window.vimgameDB.saveSetting('playerName', name);
-    nameTextSpan.textContent = `${name}`;
-    if (isInitial) {
-        Swal.fire('Great!', `Good luck, ${name}!`, 'success'); // Preklad
-    } else {
-        Swal.fire('Saved!', `Your name has been updated to ${name}.`, 'success'); // Preklad
-    }
+  };
+
+  if (!isInitial) {
+    swalOptions.showDenyButton = true;
+    swalOptions.denyButtonText = 'Reset Progress';
+    swalOptions.denyButtonColor = 'var(--red)';
+  }
+
+  const result = await Swal.fire(swalOptions);
+
+  if (result.isConfirmed && result.value) {
+    await window.vimgameDB.saveSetting('playerName', result.value);
+    nameTextSpan.textContent = `${result.value}`;
+    Swal.fire('Saved!', `Your name has been updated to ${result.value}.`, 'success');
+  } else if (result.isDenied) {
+    // User clicked "Reset Progress"
+    await handleResetProgress(); 
+  } else if (result.isConfirmed && !result.value && isInitial) {
+    // Initial prompt, but user saved an empty name (should be caught by validator but as a fallback)
+    // Re-prompt or set a default, here we re-prompt by doing nothing specific, 
+    // the game init flow might handle this or prompt again if name is still null.
+    // For now, let the validator handle it primarily.
+    // If validator is bypassed or name is empty, prompt again when needed.
+    await promptForPlayerName(true); // Force re-prompt if initial and empty
   }
 }
 
@@ -185,11 +208,16 @@ function renderLevelList() {
 function showWelcomeScreen() {
   welcomeScreenEl.classList.remove('hidden');
   gameAreaEl.classList.add('hidden');
+  // Also hide progress/badges on welcome screen, or decide if they should be visible
+  // progressBarContainerEl.classList.add('hidden');
+  // badgesContainerEl.classList.add('hidden');
 }
 
 function showGameArea() {
   welcomeScreenEl.classList.add('hidden'); // Toto zabezpečí skrytie uvítacej obrazovky
   gameAreaEl.classList.remove('hidden');
+  // Show progress/badges when game area is shown
+  updatePlayerStatsUI();
   if (fitAddon) {
       try { fitAddon.fit(); } catch(e) { console.warn("FitAddon failed.", e); }
   }
@@ -278,8 +306,18 @@ async function checkLevelGoal() {
     });
     if (currentLevelData.id === playerProgress.currentLevelId) {
       playerProgress.currentLevelId++;
+      // Simple XP gain, can be more sophisticated
+      playerProgress.xp += 10; 
+      // Example: Add a badge every 5 levels completed (or 50 XP)
+      if (playerProgress.xp > 0 && playerProgress.xp % 50 === 0) {
+          const newBadgeId = `L${playerProgress.currentLevelId -1}`; // Badge for completing the level before increment
+          if (!playerProgress.badges.includes(newBadgeId)) {
+            playerProgress.badges.push(newBadgeId);
+          }
+      }
       await window.vimgameDB.saveUserProgress(playerProgress);
       renderLevelList();
+      updatePlayerStatsUI(); // Update UI after progress change
     }
   }
 }
@@ -343,5 +381,78 @@ function fetchTextFile(path) {
   return fetch(path).then(r => r.text());
 }
 
-// Štart hry
-initializeGame(); 
+// New function to update and display progress bar and badges
+function updatePlayerStatsUI() {
+  if (!playerProgress) return;
+
+  // Update Progress Bar
+  if (progressBarEl && progressBarContainerEl) {
+    const totalLevels = levels.length;
+    const completedLevels = playerProgress.currentLevelId -1; // Assuming currentLevelId is the next level to play
+    const progressPercentage = totalLevels > 0 ? (completedLevels / totalLevels) * 100 : 0;
+    progressBarEl.style.width = `${Math.min(progressPercentage, 100)}%`;
+    progressBarContainerEl.classList.remove('hidden');
+    // Add tooltip to the progress bar container
+    progressBarContainerEl.title = `Progress: ${completedLevels} / ${totalLevels} levels completed (${Math.round(progressPercentage)}%)`;
+  } else {
+    console.warn('Progress bar elements not found.');
+  }
+
+  // Update Badges
+  if (badgesEl && badgesContainerEl) {
+    badgesEl.innerHTML = ''; // Clear existing badges
+    if (playerProgress.badges && playerProgress.badges.length > 0) {
+      playerProgress.badges.forEach(badgeText => {
+        const badgeDiv = document.createElement('div');
+        badgeDiv.className = 'badge';
+        badgeDiv.textContent = badgeText.substring(0, 3); // Display first 3 chars of badge ID or design as needed
+        badgeDiv.title = `Achievement: ${badgeText}`; // Tooltip for badge
+        badgesEl.appendChild(badgeDiv);
+      });
+      badgesContainerEl.classList.remove('hidden');
+    } else {
+      badgesContainerEl.classList.add('hidden'); // Hide if no badges
+    }
+  } else {
+    console.warn('Badges elements not found.');
+  }
+}
+
+// Handler for resetting progress
+async function handleResetProgress() {
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "This will reset all your progress and name. This action cannot be undone!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: 'var(--red)', // Use CSS variable for consistency
+    cancelButtonColor: 'var(--secondary-color)', // Use CSS variable for consistency
+    confirmButtonText: 'Yes, reset it!',
+    cancelButtonText: 'Cancel'
+  });
+
+  if (result.isConfirmed) {
+    try {
+      await window.vimgameDB.clearUserProgress();
+      await window.vimgameDB.clearSetting('playerName');
+
+      Swal.fire(
+        'Reset!',
+        'Your progress has been successfully reset.',
+        'success'
+      ).then(() => {
+        window.location.reload(); // Reload the page to reflect changes
+      });
+    } catch (error) {
+      console.error('Error during progress reset:', error);
+      Swal.fire(
+        'Error!',
+        'Could not reset progress. Please check the console for details.',
+        'error'
+      );
+    }
+  }
+}
+
+// Initialization
+document.addEventListener('DOMContentLoaded', initializeGame); 

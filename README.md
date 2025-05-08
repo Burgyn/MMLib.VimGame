@@ -1,6 +1,7 @@
 1. Nezobrazuje sa progress bar a dosiahnute achvievemnts
-2. Vymysli kreativnejsi nazov hre
-3. Hint nemoze mat skratku h, ved to je navigacna klavesa. Asi skor otaznik
+2. Kompletny reset svojho uctu
+3. Vymysli kreativnejsi nazov hre
+4. Hint nemoze mat skratku h, ved to je navigacna klavesa. Asi skor otaznik
 5. ked dam F5 tak chem byt stale v tom levely. cize asi routing musime riesit
 6. Ked enterom vyberiem levelt tak nie som focusnuty v konzole
 7. Nejaku klavesovu skratku na jump to level list }taku aby sa nebila s vim skratkami)

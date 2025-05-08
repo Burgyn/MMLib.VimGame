@@ -44,6 +44,18 @@ header {
   z-index: 10;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+#app-logo {
+  height: 32px;
+  width: 32px;
+  margin-right: 10px;
+  border-radius: 50%;
+}
+
 .header-left h1 {
   font-size: 1.8rem;
   color: var(--primary-color);
@@ -79,6 +91,14 @@ header {
   color: var(--text-color);
 }
 
+/* New styles for player profile layout */
+.player-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align items to the start (left) */
+  gap: 0.5rem; /* Space between name, progress bar, and badges */
+}
+
 #progress-bar-container.hidden,
 #badges-container.hidden {
     display: none;
@@ -93,8 +113,9 @@ header {
 }
 #progress-bar .bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--green) 0%, var(--secondary-color) 100%);
-  border-radius: 5px 0 0 5px;
+  /* background: linear-gradient(90deg, var(--green) 0%, var(--secondary-color) 100%); */
+  background: var(--green); /* Changed to solid green */
+  border-radius: 5px; /* Apply border-radius to the bar itself for a complete rounded look */
   transition: width 0.4s ease-out;
 }
 
