@@ -29,10 +29,10 @@ const statusTimeEl = document.getElementById('status-time');
 const helpModalEl = document.getElementById('help-modal');
 const closeHelpModalBtnEl = document.getElementById('close-help-modal');
 
-// Progress Modal Elements
-const progressModalEl = document.getElementById('progress-modal');
-const closeProgressModalBtnEl = document.getElementById('close-progress-modal');
-const progressModalContentEl = document.getElementById('progress-modal-content');
+// Progress Modal Elements - MOVED INSIDE initializeGame
+// const progressModalEl = document.getElementById('progress-modal');
+// const closeProgressModalBtnEl = document.getElementById('close-progress-modal');
+// const progressModalContentEl = document.getElementById('progress-modal-content');
 
 // Splash Screen Footer Elements for Stats
 const splashCompletedLevelsEl = document.getElementById('splash-completed-levels');
@@ -88,6 +88,11 @@ async function loadLevelData() {
 }
 
 async function initializeGame() {
+  // Define modal element constants here, after DOM is loaded.
+  const progressModalEl = document.getElementById('progress-modal');
+  const closeProgressModalBtnEl = document.getElementById('close-progress-modal');
+  const progressModalContentEl = document.getElementById('progress-modal-content');
+
   // Load level data first
   const levelsLoaded = await loadLevelData();
   if (!levelsLoaded) return; // Stop initialization if levels failed to load
@@ -157,18 +162,25 @@ async function initializeGame() {
     if (event.key === 'Escape') {
       if (helpModalEl && !helpModalEl.classList.contains('hidden')) {
         hideHelpModal();
-        return; // Consume event
+        return; 
       }
-      if (progressModalEl && !progressModalEl.classList.contains('hidden')) {
+      // Check progressModalEl directly here as it's now function-scoped to initializeGame
+      // but the event listener is global. This means we need to ensure progressModalEl is accessible
+      // OR pass it to the handler, OR re-select it. For simplicity, we'll rely on it being found if open.
+      const currentProgressModal = document.getElementById('progress-modal'); // Re-select for safety in global listener
+      if (currentProgressModal && !currentProgressModal.classList.contains('hidden')) {
         hideProgressModal();
-        return; // Consume event
+        return; 
       }
     }
 
     // Home screen specific shortcuts if no modal is open and welcome screen is visible
+    const currentHelpModal = document.getElementById('help-modal'); // Re-select for safety
+    const currentProgressModalForShortcut = document.getElementById('progress-modal'); // Re-select for safety
+
     if (welcomeScreenEl && !welcomeScreenEl.classList.contains('hidden') && 
-        (!helpModalEl || helpModalEl.classList.contains('hidden')) &&
-        (!progressModalEl || progressModalEl.classList.contains('hidden'))) {
+        (!currentHelpModal || currentHelpModal.classList.contains('hidden')) &&
+        (!currentProgressModalForShortcut || currentProgressModalForShortcut.classList.contains('hidden'))) {
       
       switch (event.key.toLowerCase()) {
         case 's':
@@ -828,7 +840,12 @@ function setupSplashScreenMenuActions() {
 
 // NEW functions for Progress Modal
 function showProgressModal() {
-  if (progressModalEl && progressModalContentEl) {
+  // Re-select elements at the time of function call for robustness, 
+  // especially if their top-level const declaration was problematic.
+  const currentProgressModal = document.getElementById('progress-modal');
+  const currentProgressModalContent = document.getElementById('progress-modal-content');
+
+  if (currentProgressModal && currentProgressModalContent) {
     const totalLevels = allLevelsFlat.length;
     const completedCount = Math.max(0, (playerProgress.currentLevelId || 1) - 1);
     const progressPercentage = totalLevels > 0 ? (completedCount / totalLevels) * 100 : 0;
@@ -856,20 +873,24 @@ function showProgressModal() {
       icon = '<i class="fas fa-flag-checkered" style="font-size: 3rem; color: var(--text-color-muted);"></i>';
     }
 
-    progressModalContentEl.innerHTML = `
+    currentProgressModalContent.innerHTML = `
       <div style="text-align: center; margin-bottom: 1.5rem;">${icon}</div>
       <p style="text-align: center; font-size: 1.2rem; margin-bottom: 1rem;">${message}</p>
       <p style="text-align: center; font-size: 1rem;">You have completed <strong>${completedCount}</strong> out of <strong>${totalLevels}</strong> levels.</p>
       <p style="text-align: center; font-size: 1.2rem; font-weight: bold; margin-top: 0.5rem;">That's ${progressPercentage.toFixed(0)}% progress!</p>
     `;
-    progressModalEl.classList.remove('hidden');
+    currentProgressModal.classList.remove('hidden');
   } else {
-    console.error("Progress modal elements not found!");
+    console.error("Progress modal elements not found upon trying to show!");
+    // For debugging, log what was found:
+    console.log("progressModalEl at show time:", currentProgressModal);
+    console.log("progressModalContentEl at show time:", currentProgressModalContent);
   }
 }
 
 function hideProgressModal() {
-  if (progressModalEl) {
-    progressModalEl.classList.add('hidden');
+  const currentProgressModal = document.getElementById('progress-modal'); // Re-select
+  if (currentProgressModal) {
+    currentProgressModal.classList.add('hidden');
   }
 } 
