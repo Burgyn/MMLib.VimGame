@@ -266,7 +266,7 @@ header {
 }
 
 #levels-list .level-btn.active-level-item {
-  background-color: transparent !important;
+  background-color: #232336 !important;
   color: var(--text-color) !important;
   font-weight: normal;
   border-left: 3px solid var(--primary-color);
@@ -710,7 +710,7 @@ footer {
 }
 
 #levels-list .level-btn.active-level-item {
-  background-color: transparent !important;
+  background-color: #232336 !important;
   color: var(--text-color) !important;
   font-weight: normal;
   border-left: 3px solid var(--primary-color);
