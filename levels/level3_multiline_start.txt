@@ -1,0 +1,3 @@
+Prvý riadok textu.
+Druhý riadok.
+Tretí riadok, trochu dlhší. 

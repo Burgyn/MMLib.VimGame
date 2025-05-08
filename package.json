@@ -1,0 +1,19 @@
+{
+  "name": "vimgame",
+  "version": "0.2.0",
+  "description": "Vim tréningová hra v prehliadači",
+  "scripts": {
+    "start": "http-server -c-1 -o -p 8080",
+    "dev": "http-server -c-1 -o -p 8080"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.2",
+    "dexie": "^3.2.4",
+    "sweetalert2": "^11.10.1",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  }
+}

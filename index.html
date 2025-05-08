@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VimGame - Vim Training for Programmers</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="assets/favicon.ico">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>VimGame</h1>
+    </div>
+    <div class="header-right">
+      <span id="player-name-display" title="Click to edit name"><i class="fas fa-user"></i> <span></span></span>
+      <div id="progress-bar-container" class="hidden">
+        <div id="progress-bar"></div>
+      </div>
+      <div id="badges-container" class="hidden">
+        <div id="badges"></div>
+      </div>
+    </div>
+  </header>
+  <div class="main-container">
+    <aside id="levels-sidebar">
+      <h2>Levels</h2>
+      <div id="levels-list">
+        <!-- Levely budú tu -->
+      </div>
+    </aside>
+    <main id="main-content-area">
+      <section id="welcome-screen">
+        <h2>Welcome to VimGame!</h2>
+        <p>Select a level from the left panel and start your journey to Vim mastery.</p>
+        <p>You can control the game with your keyboard. Use arrow keys to navigate levels and Enter to select.</p>
+      </section>
+      <section id="game-area" class="hidden">
+        <div id="game-header">
+          <div id="level-title"></div>
+          <button id="show-hint" tabindex="0">Hint <kbd>h</kbd></button>
+        </div>
+        <div id="level-description"></div>
+        <div id="terminal-container">
+          <!-- Xterm.js terminál bude tu -->
+        </div>
+        <div id="hint" class="hidden">
+          <!-- Hinty budú tu -->
+        </div>
+        <div id="level-controls">
+          <button id="restart-level" tabindex="0">Restart</button>
+          <button id="next-level" tabindex="0" class="hidden">Next Level</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  <footer>
+    <span>© 2025 Burgyn</span>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+  <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/vimcore.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html> 
