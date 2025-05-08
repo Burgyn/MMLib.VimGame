@@ -576,6 +576,12 @@ function updatePlayerStatsUI() {
   // Add tooltip to the progress bar container
   progressBarContainerEl.title = `Progress: ${completedLevels} / ${totalLevels} levels completed (${Math.round(progressPercentage)}%)`;
 
+  // Update status bar progress segment
+  const statusBarProgressEl = document.getElementById('status-progress');
+  if (statusBarProgressEl) {
+    statusBarProgressEl.textContent = `${completedLevels}/${totalLevels} completed`;
+  }
+
   // Update Badges
   if (badgesEl && badgesContainerEl) {
     badgesEl.innerHTML = ''; // Clear existing badges

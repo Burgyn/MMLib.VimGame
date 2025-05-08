@@ -705,6 +705,11 @@ footer {
 #status-bar .pl-time-arrow {
   display: none !important;
 }
+#status-bar .pl-progress {
+  background: var(--border-color);
+  color: var(--text-color);
+  padding-right: 1.2em;
+}
 
 /* Level Explorer (Sidebar) Styles */
 #levels-sidebar {
