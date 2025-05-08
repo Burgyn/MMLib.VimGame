@@ -696,7 +696,6 @@ footer {
   align-items: center;
   padding: 0.4rem 0.2rem;
   cursor: pointer;
-  font-weight: bold;
   color: var(--secondary-color);
   border-radius: 4px;
 }

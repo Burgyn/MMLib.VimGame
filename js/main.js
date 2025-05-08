@@ -495,10 +495,10 @@ function updateStatusBar() {
 
 // --- Keyboard Navigation for Explorer (and global shortcuts) ---
 document.addEventListener('keydown', e => {
-  // Ctrl+L to focus level explorer
-  if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+  // Ctrl+Shift+E to focus level explorer
+  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'e') {
     e.preventDefault();
-    console.log("Ctrl+L pressed. Attempting to focus level explorer.");
+    console.log("Ctrl+Shift+E pressed. Attempting to focus level explorer.");
     const firstFocusable = levelsListEl.querySelector('.chapter-header, .level-btn:not(.locked)');
     if (firstFocusable) {
       firstFocusable.focus();
