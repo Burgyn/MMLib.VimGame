@@ -23,6 +23,7 @@ const statusBarModeEl = document.getElementById('status-mode');
 const statusBarFileInfoEl = document.getElementById('status-file-info');
 const statusBarCursorPosEl = document.getElementById('status-cursor-pos');
 const statusTimeEl = document.getElementById('status-time');
+const statusBarPendingKeysEl = document.getElementById('status-pending-keys');
 
 // Help Modal Elements
 let helpModalEl;                   // MOVED back to global, changed to let
@@ -326,7 +327,13 @@ function initializeTerminal() {
 
     let vimKey = key;
     if (e.key.length > 1) { // Handle special keys like 'Escape', 'ArrowLeft', etc.
-        if (e.key === 'Escape') vimKey = 'Escape';
+        if (e.key === 'Escape') {
+            vimKey = 'Escape';
+            // Clear pending counts and keystrokes on Escape
+            window.vimcore.activeCount = "";
+            window.vimcore.pendingKeystrokes = "";
+            updateStatusBar(); // Update status bar to clear pending display
+        }
         // Potentially map other special keys if needed, or ignore them for Vim command processing
         else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
             // These are often remapped or handled by Vim, but for now, let's see if basic Vim keys cover them
@@ -369,13 +376,14 @@ function initializeTerminal() {
         currentCursorPos = result.cursor;
         
         renderEditorContent(); 
-        updateStatusBar();
+        updateStatusBar(); // This will now also clear/update pending keys display
         
         // Check level goal only if a command was processed that could affect it
         await checkLevelGoal(); 
     } else {
-        // Count was updated, or a multi-key sequence is in progress (like the first 'g').
-        // Do not re-render or check goal yet.
+        // Count was updated, or a multi-key sequence is in progress.
+        // Update status bar to show pending keys
+        updateStatusBar();
         console.log('term.onKey: Vimcore updated count or is waiting for multi-key cmd. No re-render.');
     }
 
@@ -644,6 +652,7 @@ function updateStatusBar() {
   if (!currentLevelData) {
     statusBarFileInfoEl.textContent = 'No Level Loaded';
     statusBarCursorPosEl.textContent = '';
+    if (statusBarPendingKeysEl) statusBarPendingKeysEl.textContent = ''; // Clear pending keys
     return;
   }
   statusBarFileInfoEl.textContent = `${currentLevelData.id}: ${currentLevelData.title}`;
@@ -651,6 +660,13 @@ function updateStatusBar() {
     statusBarCursorPosEl.textContent = `${currentCursorPos.row}:${currentCursorPos.col}`;
   }
   // statusBarModeEl can be updated later with Vim modes
+
+  // Update pending keystrokes display
+  if (statusBarPendingKeysEl) {
+    const count = window.vimcore.activeCount || "";
+    const keys = window.vimcore.pendingKeystrokes || "";
+    statusBarPendingKeysEl.textContent = count + keys;
+  }
 }
 
 // --- Keyboard Navigation for Explorer (and global shortcuts) ---

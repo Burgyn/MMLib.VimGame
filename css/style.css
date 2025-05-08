@@ -799,6 +799,15 @@ footer {
   color: #cdd6f4;
   padding-right: 1.2em;
 }
+#status-bar .pl-pending-keys {
+  background: var(--surface-color); /* Or a slightly different color, e.g., var(--border-color) */
+  color: var(--yellow); /* Or var(--text-color) */
+  padding: 0 0.7em; /* Consistent padding */
+}
+#status-bar .pl-pending-keys:empty {
+  background: none;
+  padding: 0;
+}
 #status-bar .pl-arrow-svg,
 #status-bar .pl-mode-arrow,
 #status-bar .pl-file-arrow,

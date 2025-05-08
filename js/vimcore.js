@@ -4,7 +4,8 @@ window.vimcore = {
   checkGoal,
   getLinesFromXterm,
   setCursorInXterm,
-  activeCount: "" // Stores the pending count for commands
+  activeCount: "", // Stores the pending count for commands
+  pendingKeystrokes: "" // Stores pending non-numeric keystrokes (e.g., 'd', 'c', 'f')
 };
 
 /**
@@ -38,29 +39,146 @@ function setCursorInXterm(term, cursorPos) {
   // Pre naše účely budeme chcieť vizuálne reprezentovať kurzor. Toto vyriešime v main.js pri renderovaní.
 }
 
+// Helper to check for motion keys (simplified)
+function isMotionKey(key) {
+  return ['h', 'l', 'j', 'k', 'w', 'b', 'e', '0', '$', 'G', 'g'].includes(key) || (key.length === 1 && key >= '0' && key <= '9'); // gg handled separately
+}
+
 /**
  * Spracuje vstup (kláves) a vráti nový stav editora.
- * @param {string} key - Stlačená klávesa (napr. 'h', 'j', '0', '$').
+ * @param {string} key - Stlačená klávesa (napr. \'h\', \'j\', \'0\', \'$\').
  * @param {string[]} lines - Aktuálny obsah editora ako pole riadkov.
  * @param {{row: number, col: number}} cursor - Aktuálna pozícia kurzora.
- * @returns {{lines: string[], cursor: {row: number, col: number}, commandProcessed: boolean }} 
- *          Nový stav. commandProcessed is true if a command was run, false if count was updated.
+ * @returns {{lines: string[], cursor: {row: number, col: number}, commandProcessed: boolean, commandOutput?: string }} 
+ *          Nový stav. commandProcessed is true if a command was run. commandOutput for messages.
  */
 function processInput(key, lines, cursor) {
   let { row, col } = cursor;
-  const newLines = lines.map(line => line); // Kópia poľa
+  let newLines = lines.map(line => line);
+  let commandExecuted = false;
+  let newRow = row;
+  let newCol = col;
 
-  // Handle digit input for counts
+  // If an operator is pending
+  if (window.vimcore.pendingKeystrokes) {
+    const operator = window.vimcore.pendingKeystrokes;
+    const motionOrSecondKey = key;
+    let count = parseInt(window.vimcore.activeCount || "1", 10);
+    if (isNaN(count) || count < 1) count = 1;
+
+    if (operator === 'd') {
+      if (motionOrSecondKey === 'd') { // 'dd' command
+        if (newLines.length > 0) {
+          for (let i = 0; i < count && newRow < newLines.length; i++) {
+            newLines.splice(newRow, 1); // Delete line at newRow
+            // No need to increment newRow for deletion, next line comes up or it becomes empty
+          }
+          if (newLines.length === 0) {
+            newRow = 0; newCol = 0; // Reset cursor if buffer empty
+          } else {
+            newRow = Math.min(newRow, newLines.length - 1); // Ensure newRow is valid
+            newCol = 0; // Cursor to start of the line below (or current if last was deleted)
+          }
+          commandExecuted = true;
+        }
+      } else if (isMotionKey(motionOrSecondKey) && motionOrSecondKey !== 'g') { // 'dw', 'de', 'd0', 'd$' etc. (excluding 'dg' for now)
+        // Simplified: 'dw' will delete from cursor to start of next word (inclusive of space if any)
+        // This is a placeholder for more precise motion calculation.
+        if (motionOrSecondKey === 'w') {
+            // Very basic 'dw': delete to end of line for now as a placeholder
+            if (newLines[newRow] !== undefined) {
+                for(let i=0; i<count; i++) { // apply count times
+                    if (newLines[newRow] !== undefined) {
+                        if (newCol < newLines[newRow].length) {
+                             newLines[newRow] = newLines[newRow].substring(0, newCol);
+                        }
+                         // If deleting multiple 'words' (lines for now), and current line becomes empty,
+                         // and it's not the last line, effectively we should delete the line.
+                        if (newLines[newRow] === "" && newLines.length > 1 && newRow < newLines.length -1) {
+                            newLines.splice(newRow, 1);
+                            // newRow stays, newCol = 0
+                        } else if (newLines[newRow] === "" && newRow === newLines.length -1 && newLines.length > 1) {
+                            // if it was the last line and became empty, stay on it.
+                             newCol = 0;
+                        } else if (newLines[newRow] === "" && newLines.length ===1) {
+                            // last line, becomes empty
+                            newCol = 0;
+                        }
+                    } else break; // no more lines to operate on
+                }
+                newCol = Math.min(newCol, (newLines[newRow] || "").length);
+                 if (newLines[newRow] === "" && newCol > 0) newCol = 0;
+
+
+                commandExecuted = true;
+            }
+        } else {
+            // For other d+motion, just log and act as if processed to clear state
+            console.log(`VimCore: Operator 'd' with motion '${motionOrSecondKey}' (count ${count}) - NOT FULLY IMPLEMENTED.`);
+            commandExecuted = true; // To clear state
+        }
+      } else if (motionOrSecondKey === 'Escape') { // Cancel pending 'd'
+        // State clearing will happen in the main `if (commandExecuted)` block or by main.js
+        window.vimcore.pendingKeystrokes = "";
+        window.vimcore.activeCount = "";
+        return { lines, cursor, commandProcessed: false }; // Let main.js handle escape UI
+      } else {
+        // Invalid sequence after 'd'
+        console.log(`VimCore: Invalid key '${motionOrSecondKey}' after 'd'.`);
+        // Bell sound should be handled by main.js if desired
+        window.vimcore.pendingKeystrokes = "";
+        window.vimcore.activeCount = "";
+        return { lines, cursor, commandProcessed: false }; // No actual Vim command processed
+      }
+
+      if (commandExecuted) {
+        window.vimcore.pendingKeystrokes = "";
+        window.vimcore.activeCount = "";
+        // Final cursor validation after 'dd' or 'dw'
+        if (newLines.length === 0) {
+            newRow = 0; newCol = 0;
+        } else {
+            newRow = Math.max(0, Math.min(newRow, newLines.length - 1));
+            const finalLineLen = (newLines[newRow] || "").length;
+            newCol = Math.max(0, Math.min(newCol, finalLineLen > 0 ? finalLineLen -1 : 0));
+        }
+        return { lines: newLines, cursor: { row: newRow, col: newCol }, commandProcessed: true };
+      }
+    }
+    // Add other operators like 'c', 'y' here in future
+    // If here, pendingKeystrokes was set but current key didn't complete it validly (or was escape)
+    // and not handled above. This case should ideally be caught by "else" above.
+    // For safety, if commandExecuted is false, means it was not a valid combo.
+    // Reset pending state.
+    window.vimcore.pendingKeystrokes = ""; 
+    // activeCount might still be valid for a *new* command starting with 'key'
+    // return { lines, cursor, commandProcessed: false }; // Indicate nothing happened for this key yet
+
+} // End of pendingKeystrokes handling
+
+
+  // Handle digit input for counts (if no operator was pending and handled above)
   if (key >= '0' && key <= '9') {
     if (key === '0' && window.vimcore.activeCount === "") {
-      // '0' is a command, not start of count, unless a count is already active
-      // This specific '0' case will be handled below as a command.
+      // '0' is a command (motion), not start of count, unless a count is already active.
+      // This will be handled by the switch statement if '0' is a motion key.
+      // So, allow '0' to fall through if activeCount is empty.
     } else {
       window.vimcore.activeCount += key;
       return { lines: newLines, cursor, commandProcessed: false }; // Count updated, no command processed yet
     }
   }
 
+  // Handle keys that START an operator sequence (if no operator was already pending)
+  // This must come AFTER digit handling, so '2d' works (activeCount="2", then 'd' makes pendingKeystrokes="d")
+  if (key === 'd' || key === 'c' || key === 'y') { // Add 'g' and others later
+    window.vimcore.pendingKeystrokes = key;
+    // activeCount (e.g., "2" from "2d") should persist.
+    return { lines: newLines, cursor, commandProcessed: false }; // Operator started, wait for motion/next key
+  }
+
+
+  // If we reach here, 'key' is a standalone command/motion, or '0' as a motion.
   let count = 1;
   if (window.vimcore.activeCount !== "") {
     count = parseInt(window.vimcore.activeCount, 10);
@@ -68,347 +186,287 @@ function processInput(key, lines, cursor) {
       count = 1; // Default to 1 if parsing fails or count is invalid
     }
   }
-  // Reset activeCount after parsing it for a command (or if key is not a digit)
-  // This reset happens regardless of whether a command is found,
-  // to clear count if a non-command, non-digit key is pressed after digits.
-  window.vimcore.activeCount = ""; 
-
+  // DO NOT reset activeCount globally here. It's reset after a command successfully uses it,
+  // or if an operation is cancelled/invalid.
 
   if (newLines.length === 0 && !['i', 'a', 'o', 'O'].includes(key)) {
+    if(window.vimcore.activeCount) window.vimcore.activeCount = ""; // Clear count if file empty and not insert
     return { lines: [], cursor: { row: 0, col: 0 }, commandProcessed: true };
   }
   if (newLines.length === 0 && ['i', 'a', 'o', 'O'].includes(key)) {
     // TODO: Handle insert modes on empty buffer
+    if(window.vimcore.activeCount) window.vimcore.activeCount = "";
     return { lines: [''], cursor: { row: 0, col: 0 }, commandProcessed: true }; // Placeholder
   }
   
   row = Math.max(0, Math.min(row, newLines.length - 1));
   let currentLine = newLines[row] || '';
-  let currentLineLength = currentLine.length;
-  // Adjust initial column based on Vim's behavior (can be on char or just after for some ops)
-  col = Math.max(0, Math.min(col, currentLineLength));
+  // col = Math.max(0, Math.min(col, currentLine.length)); // Allow cursor past EOL for $ etc.
+  col = Math.max(0, Math.min(col, currentLine.length > 0 ? currentLine.length -1 : 0)); // More restrictive default
 
+  // --- Main Command Loop (for count) ---
+  let tempRow = newRow; // Use temp vars for iterations
+  let tempCol = newCol;
 
-  let newRow = row;
-  let newCol = col;
-  let commandExecuted = false; // Flag to track if any action was taken
-
-  for (let i = 0; i < count; i++) { // Apply command `count` times
-    // Re-evaluate current line and its length for each iteration of count, esp for 'x'
-    currentLine = newLines[newRow] || '';
-    currentLineLength = currentLine.length;
+  for (let i = 0; i < count; i++) {
+    currentLine = newLines[tempRow] || ''; // Re-evaluate current line
+    let currentLineLength = currentLine.length;
     
     // Ensure col is valid for the current line state before each iteration of command
     // For commands like h,l,j,k, cursor can be temporarily out of strict bounds during calculation.
     // But for 'x', it must be on a char. For '$' it can be at length.
     // Let's adjust col for safety before commands, specific commands can override.
-    let effectiveCol = Math.max(0, Math.min(newCol, currentLineLength > 0 ? currentLineLength -1 : 0));
-    if (key === '$') { // $ allows col to be at currentLineLength
-        effectiveCol = currentLineLength;
-    }
+    let effectiveCol = Math.max(0, Math.min(tempCol, currentLineLength > 0 ? currentLineLength -1 : 0));
 
 
     switch (key) {
       case 'h':
-        if (currentLineLength > 0) newCol = Math.max(0, newCol - 1);
-        else newCol = 0;
+        if (currentLineLength > 0) tempCol = Math.max(0, tempCol - 1);
+        else tempCol = 0;
         commandExecuted = true;
         break;
       case 'l':
-        if (currentLineLength > 0) newCol = Math.min(currentLineLength - 1, newCol + 1);
-        else newCol = 0;
+        if (currentLineLength > 0) tempCol = Math.min(currentLineLength - 1, tempCol + 1);
+        else tempCol = 0;
         commandExecuted = true;
         break;
       case 'k':
-        newRow = Math.max(0, newRow - 1);
-        // Try to maintain column, or go to end of shorter line
-        const prevLineLengthK = (newLines[newRow] || '').length;
-        newCol = Math.min(newCol, prevLineLengthK > 0 ? prevLineLengthK - 1 : 0);
+        tempRow = Math.max(0, tempRow - 1);
+        const prevLineLengthK = (newLines[tempRow] || '').length;
+        tempCol = Math.min(tempCol, prevLineLengthK > 0 ? prevLineLengthK - 1 : 0);
         commandExecuted = true;
         break;
       case 'j':
-        newRow = Math.min(newLines.length - 1, newRow + 1);
-        const nextLineLengthJ = (newLines[newRow] || '').length;
-        newCol = Math.min(newCol, nextLineLengthJ > 0 ? nextLineLengthJ - 1 : 0);
+        tempRow = Math.min(newLines.length - 1, tempRow + 1);
+        const nextLineLengthJ = (newLines[tempRow] || '').length;
+        tempCol = Math.min(tempCol, nextLineLengthJ > 0 ? nextLineLengthJ - 1 : 0);
         commandExecuted = true;
         break;
       case '0':
-        newCol = 0;
+        tempCol = 0;
         commandExecuted = true;
-        // '0' typically doesn't repeat with count in a meaningful direct way for this simple model
-        if (i > 0) break; // break from count loop for '0'
+        if (i > 0) break; 
         break;
       case '$':
-        newCol = currentLineLength > 0 ? currentLineLength -1 : 0; // Move to last char
-        // Or newCol = currentLineLength; // to move AFTER last char
-        // Vim's $ in normal mode moves to the last character of the line.
-        // For cursor positioning, length - 1 is more common if line not empty.
+        tempCol = currentLineLength > 0 ? currentLineLength -1 : 0;
         commandExecuted = true;
-        if (i > 0) break; // break from count loop for '$'
+        if (i > 0) break; 
         break;
       case 'x':
-        // 'x' should use effectiveCol which ensures it's on an existing character
-        if (currentLineLength > 0 && effectiveCol < currentLineLength) {
-          newLines[newRow] = currentLine.substring(0, effectiveCol) + currentLine.substring(effectiveCol + 1);
-          // Cursor remains, or moves left if last char deleted
-          const newLineLengthX = newLines[newRow].length;
-          newCol = Math.min(effectiveCol, newLineLengthX > 0 ? newLineLengthX - 1 : 0);
+        if (currentLineLength > 0 && effectiveCol < currentLineLength) { // use effectiveCol for 'x'
+          newLines[tempRow] = currentLine.substring(0, effectiveCol) + currentLine.substring(effectiveCol + 1);
+          const newLineLengthX = newLines[tempRow].length;
+          // Cursor remains at effectiveCol, or moves left if last char deleted
+          tempCol = Math.min(effectiveCol, newLineLengthX > 0 ? newLineLengthX - 1 : 0);
           commandExecuted = true;
         } else {
-           if (i > 0) break; // if 'x' did nothing, and it's part of a count, stop.
+           if (i > 0) break; 
         }
-        break;
-      case 'g': // Check for 'gg'
-        if (i === 0 && count === 1) { // Only check for next 'g' if no count or count is 1 (for simple 'gg')
-            // This is a simplified 'g', actual 'g' needs a following char.
-            // We'll make 'g' itself a NOOP unless followed by 'g' (handled in main.js or by sending 'gg' as key)
-            // For now, if 'g' alone, do nothing. 'gg' will be a separate "key".
-            // To implement 'gg' properly here, processInput would need to handle multi-key commands
-            // or `key` would be 'gg'. Let's assume `key` can be 'gg'.
-        }
-        commandExecuted = false; // 'g' alone does nothing
         break;
       case 'w': {
-        commandExecuted = true;
-        let r = newRow;
-        let c = newCol;
-        let currentLineText = newLines[r] || "";
+        commandExecuted = true; // Assume it will execute, set to false if it can't move
+        let r = tempRow;
+        let c = tempCol;
+        let currentWordLineText = newLines[r] || "";
 
-        // Phase 1: If on a non-whitespace character, advance c to the position AFTER the current word.
-        if (c < currentLineText.length && !/\s/.test(currentLineText[c])) {
-            while (c < currentLineText.length && !/\s/.test(currentLineText[c])) {
+        if (c < currentWordLineText.length && !/\\s/.test(currentWordLineText[c])) {
+            while (c < currentWordLineText.length && !/\\s/.test(currentWordLineText[c])) {
                 c++;
             }
         }
 
-        // Phase 2: Skip whitespace, advancing to the next line if necessary, until a non-whitespace char is found or EOF.
         let wordFound = false;
         while (!wordFound) {
-            if (c < currentLineText.length) { // Still on the current line text being examined
-                if (/\s/.test(currentLineText[c])) {
-                    c++; // Skip space
+            if (c < currentWordLineText.length) {
+                if (/\\s/.test(currentWordLineText[c])) {
+                    c++; 
                 } else {
-                    // Found start of the next word on the current line segment
-                    newCol = c;
-                    newRow = r;
+                    tempCol = c;
+                    tempRow = r;
                     wordFound = true;
                 }
-            } else { // Reached end of current line text (c >= currentLineText.length)
-                if (r < newLines.length - 1) { // Can go to next line
+            } else { 
+                if (r < newLines.length - 1) {
                     r++;
                     c = 0;
-                    currentLineText = newLines[r] || ""; // Update currentLineText to the new line
-                    if (currentLineText.length === 0 && r < newLines.length - 1) {
-                        // Current new line is empty, and it's not the last line of the file,
-                        // so loop again to effectively skip this empty line.
-                        // The loop condition (c < currentLineText.length) will be false, leading to the else here again.
+                    currentWordLineText = newLines[r] || "";
+                    if (currentWordLineText.length === 0 && r < newLines.length - 1) {
                         continue; 
                     }
-                    // If the new line (even if empty) is the last line, or if it has content,
-                    // the loop will re-evaluate c < currentLineText.length.
                 } else {
-                    // End of file, cannot move further
-                    commandExecuted = false; 
-                    // Position cursor at the end of the very last line.
-                    newRow = r; // Should be last line index already
-                    newCol = Math.max(0, currentLineText.length); // Go to end of line (after last char)
-                                                              // Vim 'w' at EOF often stays put or on last char.
-                                                              // For simplicity, let's ensure it stays on the line.
-                    if (currentLineText.length > 0) newCol = currentLineText.length -1;
-                    else newCol = 0;
-
-                    wordFound = true; // Stop searching
+                    // End of file
+                    if (i === 0) commandExecuted = false; // Only set false if first attempt fails
+                    tempRow = r; 
+                    tempCol = Math.max(0, currentWordLineText.length > 0 ? currentWordLineText.length -1 : 0);
+                    wordFound = true; 
                 }
             }
         }
-        
-        if (!commandExecuted && i === 0) count = 1; // If w can't move, don't repeat for count.
+        if (!commandExecuted && i === 0 && count > 1) count = 1; // If 'w' can't move, don't try to repeat for count.
         break;
       }
       case 'b': {
-        commandExecuted = true;
-        let r = newRow;
-        let c = newCol;
-        let currentLineText = newLines[r] || "";
+        commandExecuted = true; // Assume it will execute
+        let r = tempRow;
+        let c = tempCol;
+        let currentWordLineText = newLines[r] || "";
 
-        // Phase 1: If current `c` is on whitespace or at the very start of a word, move `c` back one position to start search from there.
-        // This helps `b` when pressed multiple times to correctly cross word boundaries.
-        if (c > 0 && (/\s/.test(currentLineText[c]) || (c > 0 && /\s/.test(currentLineText[c-1])) ) ) {
+        if (c > 0 && (/\\s/.test(currentWordLineText[c]) || (c > 0 && /\\s/.test(currentWordLineText[c-1])) ) ) {
             c--;
         }
-        // If c is at the start of the line (0) but not the first line, and we need to go to prev line:
-        else if (c === 0 && r > 0 && ( (currentLineText.length === 0) || (currentLineText.length > 0 && /\s/.test(currentLineText[0])) ) ) {
-             // If at (0,0) or (line_start, whitespace) and r > 0, prepare to go to previous line
-        } else if (c > 0 && !/\s/.test(currentLineText[c]) && /\s/.test(currentLineText[c-1]) ){
-            // If cursor is at the beginning of a word (not whitespace, but prev char is whitespace)
-            c--; // Move into the whitespace or previous word to start scan properly.
+        else if (c === 0 && r > 0 && ( (currentWordLineText.length === 0) || (currentWordLineText.length > 0 && /\\s/.test(currentWordLineText[0])) ) ) {
+        } else if (c > 0 && !/\\s/.test(currentWordLineText[c]) && /\\s/.test(currentWordLineText[c-1]) ){
+            c--; 
         }
 
-        // Phase 2: Find the beginning of the previous/current word.
         let wordFound = false;
         while (!wordFound) {
-            if (c >= 0 && c < currentLineText.length) { // Still on the current line text being examined
-                if (/\s/.test(currentLineText[c])) {
-                    c--; // Skip whitespace backwards
-                    if (c < 0) { // Reached beginning of line while skipping spaces
-                        // Handled by the `else` block below (c < 0)
+            if (c >= 0 && c < currentWordLineText.length) {
+                if (/\\s/.test(currentWordLineText[c])) {
+                    c--; 
+                    if (c < 0) { 
                     }
                 } else {
-                    // Now on a non-whitespace character. Move to the beginning of this word.
-                    while (c >= 0 && !/\s/.test(currentLineText[c])) {
+                    while (c >= 0 && !/\\s/.test(currentWordLineText[c])) {
                         c--;
                     }
-                    newCol = c + 1; // The char after the space, or 0 if word starts at line beginning.
-                    newRow = r;
+                    tempCol = c + 1; 
+                    tempRow = r;
                     wordFound = true;
                 }
-            } else { // Reached end (c < 0) or start (c >= length, though not for 'b') of current line text
-                if (r > 0) { // Can go to previous line
+            } else { 
+                if (r > 0) { 
                     r--;
-                    currentLineText = newLines[r] || "";
-                    c = Math.max(0, currentLineText.length - 1); // Go to end of previous line
-                    if (currentLineText.length === 0 && r > 0) { // Previous line is empty, and it's not the first line
-                        continue; // Skip this empty line by re-entering while loop
+                    currentWordLineText = newLines[r] || "";
+                    c = Math.max(0, currentWordLineText.length - 1); 
+                    if (currentWordLineText.length === 0 && r > 0) { 
+                        continue; 
                     }
                 } else {
-                    // Start of file, cannot move further back
-                    commandExecuted = false;
-                    newRow = 0;
-                    newCol = 0;
-                    wordFound = true; // Stop searching
+                    if (i === 0) commandExecuted = false;
+                    tempRow = 0;
+                    tempCol = 0;
+                    wordFound = true; 
                 }
             }
         }
-        if (!commandExecuted && i === 0) count = 1;
+        if (!commandExecuted && i === 0 && count > 1) count = 1;
         break;
       }
       case 'e': {
-        commandExecuted = true;
-        let r = newRow;
-        let c = newCol;
+        commandExecuted = true; // Assume it will execute
+        let r = tempRow;
+        let c = tempCol;
         let line = newLines[r] || "";
-
-        // Determine if we are trying to find the end of the *current* word 
-        // or the *next* word based on the initial cursor position.
         let findNextWordEnd = false;
-        if (c < line.length && /\s/.test(line[c])) { // Started on whitespace
+
+        if (c < line.length && /\\s/.test(line[c])) { 
             findNextWordEnd = true;
-        } else if (c < line.length) { // Started on a non-whitespace character
-            // Check if already at the end of the current word
+        } else if (c < line.length) { 
             let atEndOfCurrentWord = true;
-            if (c < line.length - 1 && !/\s/.test(line[c+1])) {
-                atEndOfCurrentWord = false; // Next char is part of the same word
+            if (c < line.length - 1 && !/\\s/.test(line[c+1])) {
+                atEndOfCurrentWord = false; 
             }
             if (atEndOfCurrentWord) {
-                findNextWordEnd = true; // Already at end of current, so find next
+                findNextWordEnd = true; 
             }
-        } else { // At end of line or on an empty line, effectively need to find next word if possible
+        } else { 
             findNextWordEnd = true;
         }
 
         if (!findNextWordEnd) {
-            // Move to the end of the CURRENT word
-            while (c < line.length - 1 && !/\s/.test(line[c+1])) {
+            while (c < line.length - 1 && !/\\s/.test(line[c+1])) {
                 c++;
             }
-            newCol = c;
-            newRow = r;
+            tempCol = c;
+            tempRow = r;
         } else {
-            // Find the end of the NEXT word
-            // Step 1: Move past the current word and/or any initial whitespace to find the start of the next search area.
-            if (c < line.length && !/\s/.test(line[c])) { // If on a word, move to its end first
-                while (c < line.length && !/\s/.test(line[c])) {
+            if (c < line.length && !/\\s/.test(line[c])) { 
+                while (c < line.length && !/\\s/.test(line[c])) {
                     c++;
                 }
-            } // Now c is on whitespace or at EOL
+            } 
             
-            // Step 2: Skip all subsequent whitespace, advancing to next line if needed.
             let advancedToNextWordRegion = false;
             while(!advancedToNextWordRegion){
                 if(c < line.length){
-                    if(/\s/.test(line[c])){
+                    if(/\\s/.test(line[c])){
                         c++;
                     } else {
-                        advancedToNextWordRegion = true; // Found start of next word region
+                        advancedToNextWordRegion = true; 
                     }
-                } else { // End of current line
+                } else { 
                     if (r < newLines.length - 1) {
                         r++;
                         c = 0;
                         line = newLines[r] || "";
-                        if (line.length === 0 && r < newLines.length -1) { // New line is empty, skip it
+                        if (line.length === 0 && r < newLines.length -1) { 
                            continue;
                         }                        
-                        // If new line (empty or not) makes c invalid, outer loop handles it.
-                        // If new line starts with non-space, advancedToNextWordRegion will become true.
                     } else {
-                        commandExecuted = false; // EOF
-                        newCol = Math.max(0, line.length - 1); // Stay at end of last line
-                        if(line.length === 0) newCol = 0;
-                        newRow = r;
-                        advancedToNextWordRegion = true; // Break search
+                        if(i === 0) commandExecuted = false; 
+                        tempCol = Math.max(0, line.length - 1); 
+                        if(line.length === 0) tempCol = 0;
+                        tempRow = r;
+                        advancedToNextWordRegion = true; 
                         break;
                     }
                 }
             }
 
-            if (commandExecuted) { // If not EOF
-                 // Step 3: Now c is at the beginning of the next word. Find its end.
-                 if (c < line.length) { // Ensure c is still valid (e.g., didn't skip to an all-whitespace last line)
-                    while (c < line.length - 1 && !/\s/.test(line[c+1])) {
+            if (commandExecuted) { 
+                 if (c < line.length) { 
+                    while (c < line.length - 1 && !/\\s/.test(line[c+1])) {
                         c++;
                     }
-                    newCol = c;
-                    newRow = r;
-                 } else { // Might happen if last line is all spaces or we skipped an empty last line to EOF
-                    commandExecuted = false;
-                    newCol = Math.max(0, line.length -1); // Position at the very end of the (potentially empty) line.
-                    if (line.length === 0) newCol = 0;
-                    newRow = r;
+                    tempCol = c;
+                    tempRow = r;
+                 } else { 
+                    if(i === 0) commandExecuted = false;
+                    tempCol = Math.max(0, line.length -1); 
+                    if (line.length === 0) tempCol = 0;
+                    tempRow = r;
                  }
             }
         }
-        
-        if (!commandExecuted && i === 0) count = 1; 
+        if (!commandExecuted && i === 0 && count > 1) count = 1; 
         break;
       }
-      // More commands will be added here
+      case 'g': // Special handling for 'g' might be needed if 'gg' is not passed as a single key
+        // For now, 'g' alone does nothing unless 'gg' logic is elsewhere or passed as 'gg'
+        // If 'gg' is handled by main.js sending "gg", this case might not be hit for that.
+        commandExecuted = false; // 'g' alone does nothing unless part of 'gg'
+        break;
       default:
-        // If key is not a digit and not a known command, count is already reset.
-        // No command executed for this unknown key.
-        if (i > 0) break; // break from count loop if unknown command
         commandExecuted = false; 
         break;
     }
-    if (!commandExecuted && i === 0) break; // If the first execution of a command did nothing (e.g. 'x' on empty line), don't repeat.
-    if (key === '0' || key === '$') break; // These commands don't typically repeat with count for N times.
-  }
+    if (!commandExecuted && i === 0 && count > 1) { // If the first execution of a command did nothing, don't repeat.
+        break; 
+    }
+    if (key === '0' || key === '$') { // These commands don't typically repeat with count for N times.
+        if (i === 0 && commandExecuted) { /* allow first execution */ } else { break; }
+    }
 
-  if (key === 'g' && arguments[0] === 'g') { // A bit of a hack to check for 'gg' if passed that way
-      newRow = 0; 
-      newCol = 0;
-      commandExecuted = true;
-      if (count > 1) { // e.g. 3gg goes to line 3 (index 2)
-        newRow = Math.min(count - 1, newLines.length - 1);
-      }
-  }
-  // Special handling for 'G'
+    // After one iteration of the command, update row/col for the next iteration if count > 1
+    newRow = tempRow;
+    newCol = tempCol;
+  } // End of for loop for count
+
+
+  // Handle 'G' and 'gg' (if passed as "gg") post-loop, as they set row/col directly based on final count.
   if (key === 'G') {
-    if (count === 1 && window.vimcore.activeCount === "") { // G to last line (count was default 1 because activeCount was empty)
+    if (count === 1 && window.vimcore.activeCount === "") { // G to last line
         newRow = newLines.length - 1;
     } else { // <count>G to line <count>
         newRow = Math.min(count - 1, newLines.length - 1);
     }
-    newRow = Math.max(0, newRow); // Ensure row is not negative
-    const targetLineLengthG = (newLines[newRow] || '').length;
-    newCol = Math.min(newCol, targetLineLengthG > 0 ? targetLineLengthG -1 : 0); // try to keep col, or move to end
-    // Vim often goes to first non-whitespace, for simplicity, col 0 or keep current if valid
-    newCol = 0; // Simplification: go to column 0 of the target line.
+    newRow = Math.max(0, newRow);
+    newCol = 0; // Go to column 0 of the target line.
     commandExecuted = true;
   }
-  // Handle 'gg' if key is "gg" (requires main.js to send "gg")
-  if (key === "gg") {
-      newRow = Math.min(count - 1, newLines.length - 1);
+  if (key === "gg") { // If main.js sends "gg" as the key
+      newRow = Math.min(count - 1, newLines.length - 1); // count is from activeCount e.g. 3gg
       newRow = Math.max(0, newRow);
       newCol = 0; // Go to column 0 of the target line
       commandExecuted = true;
@@ -416,16 +474,29 @@ function processInput(key, lines, cursor) {
 
 
   // Final cursor position validation
-  const finalLineLength = (newLines[newRow] || '').length;
-  if (newCol >= finalLineLength && finalLineLength > 0) {
-      newCol = finalLineLength - 1; // Place cursor on the last character
-  } else if (finalLineLength === 0) {
-      newCol = 0; // Cursor at col 0 for empty line
+  if (commandExecuted) {
+    newRow = Math.max(0, Math.min(newRow, newLines.length - 1)); // Ensure row is valid
+    const finalLineLength = (newLines[newRow] || '').length;
+    if (newCol >= finalLineLength && finalLineLength > 0) {
+        newCol = finalLineLength - 1;
+    } else if (finalLineLength === 0) {
+        newCol = 0;
+    } else {
+        newCol = Math.max(0, newCol); // Ensure col is not negative
+    }
+    window.vimcore.activeCount = ""; // Clear count after successful standalone command
+  } else {
+    // If no command was executed (e.g., unknown key, or an operator key that didn't complete)
+    // Do not clear activeCount if it was just a sequence of digits.
+    // If it was an unknown key after digits, then clear activeCount.
+    if (! (key >= '0' && key <= '9') ) { // If key is not a digit
+         // and it wasn't 'd', 'c', 'y' (which return early if starting sequence)
+        if (!['d', 'c', 'y'].includes(key)) {
+             window.vimcore.activeCount = ""; // Clear for unknown non-digit, non-operator-starting key
+        }
+    }
   }
-  // If cursor is past actual content (e.g. after $), normalise it for most operations
-  // but display might show it at 'length'. For logic, 'length-1' is safer if not empty.
-
-
+  
   return { lines: newLines, cursor: { row: newRow, col: newCol }, commandProcessed: commandExecuted };
 }
 
