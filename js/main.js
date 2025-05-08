@@ -158,47 +158,55 @@ async function initializeGame() {
 
   // Global keydown listener for home screen shortcuts and modal escapes
   document.addEventListener('keydown', (event) => {
-    // Modal escapes first
-    if (event.key === 'Escape') {
-      if (helpModalEl && !helpModalEl.classList.contains('hidden')) {
+    const key = event.key.toLowerCase();
+
+    // --- Modal Escape Handling (Highest Priority) ---
+    if (key === 'escape') {
+      const currentHelpModal = document.getElementById('help-modal');
+      if (currentHelpModal && !currentHelpModal.classList.contains('hidden')) {
         hideHelpModal();
-        return; 
+        event.preventDefault(); // Prevent other escape actions if modal was closed
+        return;
       }
-      // Check progressModalEl directly here as it's now function-scoped to initializeGame
-      // but the event listener is global. This means we need to ensure progressModalEl is accessible
-      // OR pass it to the handler, OR re-select it. For simplicity, we'll rely on it being found if open.
-      const currentProgressModal = document.getElementById('progress-modal'); // Re-select for safety in global listener
+      const currentProgressModal = document.getElementById('progress-modal');
       if (currentProgressModal && !currentProgressModal.classList.contains('hidden')) {
         hideProgressModal();
-        return; 
+        event.preventDefault(); // Prevent other escape actions if modal was closed
+        return;
+      }
+      // Note: SweetAlerts handle their own escape.
+    }
+
+    // --- Global Shortcuts (if no modals are open and event not already handled) ---
+    const helpModalVisible = !document.getElementById('help-modal')?.classList.contains('hidden');
+    const progressModalVisible = !document.getElementById('progress-modal')?.classList.contains('hidden');
+    const anyModalVisible = helpModalVisible || progressModalVisible; // Extend with other modals if any
+
+    if (!anyModalVisible && !event.defaultPrevented) {
+      if (key === 'r') {
+        console.log("Global 'r' key pressed for My Progress");
+        showProgressModal();
+        event.preventDefault(); // Prevent potential further handling
+        return;
+      }
+      if (key === 'h') {
+        console.log("Global 'h' key pressed for Help");
+        showHelpModal();
+        event.preventDefault(); // Prevent potential further handling
+        return;
       }
     }
 
-    // Home screen specific shortcuts if no modal is open and welcome screen is visible
-    const currentHelpModal = document.getElementById('help-modal'); // Re-select for safety
-    const currentProgressModalForShortcut = document.getElementById('progress-modal'); // Re-select for safety
-
-    if (welcomeScreenEl && !welcomeScreenEl.classList.contains('hidden') && 
-        (!currentHelpModal || currentHelpModal.classList.contains('hidden')) &&
-        (!currentProgressModalForShortcut || currentProgressModalForShortcut.classList.contains('hidden'))) {
-      
-      switch (event.key.toLowerCase()) {
-        case 's':
-          console.log("'s' key pressed on home screen for Start Learning");
-          // Find the corresponding menu item and simulate a click 
-          // or directly call the action if it's simpler.
-          document.querySelector('.splash-menu li i.fa-play-circle')?.closest('li')?.click();
-          break;
-        case 'r': // For My Progress
-          console.log("'r' key pressed on home screen for My Progress");
-          document.querySelector('.splash-menu li i.fa-tasks')?.closest('li')?.click();
-          break;
-        case 'h': // For Help
-          console.log("'h' key pressed on home screen for Help");
-          document.querySelector('.splash-menu li i.fa-question-circle')?.closest('li')?.click();
-          break;
-        // Ctrl+Shift+E is handled by a separate, more global listener already in the code for explorer focus.
-        // The 'l' for select level is removed as a direct keybind from home if Ctrl+Shift+E is the main one.
+    // --- Home Screen Specific Shortcuts (if home is visible and no modals) ---
+    if (welcomeScreenEl && !welcomeScreenEl.classList.contains('hidden') && !anyModalVisible) {
+      if (key === 's' && !event.defaultPrevented) {
+        console.log("'s' key pressed on home screen for Start Learning");
+        // Simulate click on the "Start Learning" menu item
+        const startLearningItem = Array.from(document.querySelectorAll('.splash-menu li span')).find(span => span.textContent.toLowerCase() === 'start learning');
+        startLearningItem?.closest('li')?.click();
+        event.preventDefault();
+        // The other home screen shortcuts (r, h) are now handled by the global section above
+        // so they don't need to be duplicated here.
       }
     }
   });
