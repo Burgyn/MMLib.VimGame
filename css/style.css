@@ -507,12 +507,7 @@ button.hidden {
 }
 
 footer {
-  background-color: var(--surface-color);
-  color: var(--text-color-muted);
-  text-align: center;
-  padding: 0.8rem 0;
-  font-size: 0.9rem;
-  border-top: 1px solid var(--border-color);
+  display: none !important;
 }
 
 @media (max-width: 768px) {
@@ -631,42 +626,84 @@ footer {
 
 /* Status Bar Styles */
 #status-bar {
-  background-color: var(--surface-color);
-  color: var(--text-color);
-  padding: 0.3rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem; /* Slightly smaller status bar font */
-  border-top: 1px solid var(--border-color);
-  position: fixed; /* Fixed at the bottom */
-  bottom: 0;
+  position: fixed;
   left: 0;
-  width: 100%;
-  z-index: 100; /* Above most content, below modals */
+  bottom: 0;
+  width: 100vw;
+  height: 32px;
+  display: flex;
+  align-items: stretch;
+  font-family: 'FiraCode Nerd Font', 'Fira Code', monospace;
+  font-size: 1em;
+  z-index: 100;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
 }
-
-.status-left, .status-right {
+.statusbar-left, .statusbar-right {
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  pointer-events: auto;
+}
+#status-bar .pl-segment, #status-bar .pl-arrow {
   display: flex;
   align-items: center;
+  height: 32px;
+  font-size: 1em;
+  font-family: 'FiraCode Nerd Font', 'JetBrainsMono Nerd Font', 'Hack Nerd Font', 'Nerd Font', 'Fira Code', monospace !important;
+  font-weight: 500;
+  user-select: none;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
 }
-
-.status-segment {
-  padding: 0 0.5em;
-  border-right: 1px solid var(--border-color);
+#status-bar .pl-segment {
+  padding: 0 0.9em 0 0.7em;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  font-family: 'FiraCode Nerd Font', 'JetBrainsMono Nerd Font', 'Hack Nerd Font', 'Nerd Font', 'Fira Code', monospace !important;
+  font-size: 1em;
+  font-weight: 500;
+  border: none;
+  box-shadow: none;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
 }
-
-.status-segment:last-child {
-  border-right: none;
+#status-bar .pl-mode {
+  background: #4f78c4;
+  color: #fff;
+  padding-left: 1.1em;
+  padding-right: 0.7em;
 }
-
-#status-mode {
-  background-color: var(--secondary-color); /* Purple background for mode */
-  color: var(--text-color); /* Keep light text */
-  font-weight: bold;
-  padding: 0.1em 0.6em;
-  border-radius: 4px;
-  margin-right: 0.5em;
+#status-bar .pl-file {
+  background: #232336;
+  color: #cdd6f4;
+}
+#status-bar .pl-pos {
+  background: #181825;
+  color: #8be9fd;
+}
+#status-bar .pl-time {
+  background: #282a36;
+  color: #f1fa8c;
+  padding-right: 1.2em;
+}
+#status-bar .pl-copyright {
+  background: #232336;
+  color: #cdd6f4;
+  padding-right: 1.2em;
+}
+#status-bar .pl-arrow-svg,
+#status-bar .pl-mode-arrow,
+#status-bar .pl-file-arrow,
+#status-bar .pl-pos-arrow,
+#status-bar .pl-time-arrow {
+  display: none !important;
 }
 
 /* Level Explorer (Sidebar) Styles */

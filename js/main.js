@@ -22,6 +22,7 @@ const badgesEl = document.getElementById('badges');
 const statusBarModeEl = document.getElementById('status-mode');
 const statusBarFileInfoEl = document.getElementById('status-file-info');
 const statusBarCursorPosEl = document.getElementById('status-cursor-pos');
+const statusTimeEl = document.getElementById('status-time');
 
 
 // Level Palette Modal Elements (Now disabled, explorer is primary)
@@ -637,4 +638,16 @@ function fetchTextFile(path) {
 }
 
 // Initialization
-document.addEventListener('DOMContentLoaded', initializeGame); 
+document.addEventListener('DOMContentLoaded', initializeGame);
+
+function updateStatusTime() {
+  const el = document.getElementById('status-time');
+  if (!el) return;
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  el.textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateStatusTime, 1000);
+document.addEventListener('DOMContentLoaded', updateStatusTime); 
