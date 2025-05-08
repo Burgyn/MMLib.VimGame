@@ -151,10 +151,10 @@ header {
 
 #levels-sidebar {
   width: var(--sidebar-width);
-  background-color: var(--surface-color);
-  padding: 0.5rem 0.2rem; /* Reduced padding */
+  background-color: #181825; /* sidebar ešte tmavší, podľa Neovim */
+  padding: 0.5rem 0.2rem;
   border-right: 1px solid var(--border-color);
-  overflow-y: auto; 
+  overflow-y: auto;
 }
 
 #levels-sidebar h2 {
@@ -179,7 +179,13 @@ header {
 }
 
 .chapter-item {
-  /* No extra styles needed */
+  background-color: #181825 !important;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  border: none;
+  box-shadow: none;
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 .chapter-header {
@@ -193,6 +199,8 @@ header {
   font-size: var(--explorer-font-size);
   transition: background-color 0.1s ease;
   border: 1px solid transparent; /* Border for focus */
+  background: none;
+  font-family: 'Fira Code', monospace !important;
 }
 
 .chapter-header:hover {
@@ -229,16 +237,16 @@ header {
 
 /* Individual Level Item in Explorer */
 #levels-list .level-btn { 
-  background-color: transparent;
+  background-color: transparent !important;
   color: var(--text-color);
-  border: 1px solid transparent; /* Border for focus */
-  border-radius: 0; /* No radius */
+  border: 1px solid transparent;
+  border-radius: 0;
   padding: var(--explorer-item-padding);
   font-size: var(--explorer-font-size);
   cursor: pointer;
   transition: background-color 0.1s ease, color 0.1s ease;
   text-align: left;
-  font-family: var(--font-ui);
+  font-family: 'Fira Code', monospace !important;
   display: flex; 
   align-items: center;
   width: 100%;
@@ -258,10 +266,12 @@ header {
 }
 
 #levels-list .level-btn.active-level-item {
-  background-color: var(--selection-bg) !important; /* Same as focus for active */
-  color: var(--primary-color) !important; /* Use accent color for active text */
-  font-weight: bold;
-  border: 1px solid transparent;
+  background-color: transparent !important;
+  color: var(--text-color) !important;
+  font-weight: normal;
+  border-left: 3px solid var(--primary-color);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 #levels-list .level-btn .level-icon {
@@ -672,8 +682,8 @@ footer {
 
 /* Individual Level Item in Explorer */
 #levels-list .level-btn { /* Re-style existing .level-btn for explorer context */
-  background-color: transparent;
-  color: var(--text-color-muted);
+  background-color: transparent !important;
+  color: var(--text-color);
   border: none; /* Remove old borders */
   border-radius: 3px;
   padding: 0.3rem 0.5rem;
@@ -699,9 +709,12 @@ footer {
 }
 
 #levels-list .level-btn.active-level-item {
-  background-color: var(--primary-color) !important; /* Ensure it overrides hover/focus */
-  color: var(--surface-color) !important;
-  font-weight: bold;
+  background-color: transparent !important;
+  color: var(--text-color) !important;
+  font-weight: normal;
+  border-left: 3px solid var(--primary-color);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 #levels-list .level-btn .level-icon {

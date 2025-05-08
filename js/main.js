@@ -248,7 +248,9 @@ function renderLevelExplorer() {
     const chapterHeader = document.createElement('div');
     chapterHeader.className = 'chapter-header';
     chapterHeader.tabIndex = 0; // Make focusable
-    chapterHeader.innerHTML = `<span class="chapter-toggle-icon">${chapter.isOpen ? '▼' : '▶'}</span>${chapter.title}`;
+    // Folder icon: closed = [34m[0m, open = [34m[0m (use Unicode or Nerd Font if available)
+    const folderIcon = chapter.isOpen ? '📂' : '📁'; // fallback: open/closed folder emoji
+    chapterHeader.innerHTML = `<span class="chapter-toggle-icon">${folderIcon}</span>${chapter.title}`;
     chapterHeader.addEventListener('click', () => toggleChapter(chapter.id));
     chapterHeader.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { // Space or Enter to toggle
@@ -310,7 +312,7 @@ function toggleChapter(chapterId) {
     const icon = chapterItem.querySelector('.chapter-toggle-icon');
     const chapterData = chapters.find(c => c.id === chapterId);
     if (chapterData) chapterData.isOpen = !chapterData.isOpen; // Update state model
-    if (icon) icon.textContent = chapterItem.classList.contains('open') ? '▼' : '▶';
+    if (icon) icon.textContent = chapterItem.classList.contains('open') ? '📂' : '📁';
   }
 }
 
