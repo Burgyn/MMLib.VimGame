@@ -17,7 +17,6 @@ const progressBarContainerEl = document.getElementById('progress-bar-container')
 const progressBarEl = document.querySelector('#progress-bar .bar');
 const badgesContainerEl = document.getElementById('badges-container');
 const badgesEl = document.getElementById('badges');
-const mainTitleHeaderEl = document.getElementById('main-title-header'); // Added for home screen navigation
 
 // Status Bar Elements
 const statusBarModeEl = document.getElementById('status-mode');
@@ -126,13 +125,6 @@ async function initializeGame() {
   // Listen for subsequent hash changes
   window.addEventListener('hashchange', handleHashChange, false);
   
-  // Add event listener for the main header title
-  if (mainTitleHeaderEl) {
-    mainTitleHeaderEl.addEventListener('click', () => {
-      window.location.hash = '#/home';
-    });
-  }
-
   // Add event listeners for splash menu items
   setupSplashScreenMenuActions();
 

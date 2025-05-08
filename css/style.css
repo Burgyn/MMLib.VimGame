@@ -63,11 +63,24 @@ header {
   border-radius: 50%;
 }
 
+/* Commenting out old H1 style */
+/*
 .header-left h1 {
   font-size: 1.8rem;
   color: var(--primary-color);
   letter-spacing: 1px;
   margin: 0;
+}
+*/
+
+/* New style for the anchor tag acting as H1 */
+.header-left .main-title-as-link {
+  font-size: 1.8rem;
+  color: var(--primary-color);
+  letter-spacing: 1px;
+  margin: 0;
+  text-decoration: none; /* Remove underline */
+  font-weight: bold; /* Typically H1s are bold */
 }
 
 .header-right {
@@ -619,7 +632,7 @@ footer {
     gap: 0.5rem;
     padding: 0.8rem 1rem;
   }
-  .header-left h1 {
+  .header-left .main-title-as-link {
     font-size: 1.5rem;
   }
   #progress-bar {
