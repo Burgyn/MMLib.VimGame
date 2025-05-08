@@ -284,70 +284,92 @@ function processInput(key, lines, cursor) {
       }
       case 'e': {
         commandExecuted = true;
-        let line = newLines[newRow] || "";
-        if (newCol >= line.length -1 && newRow < newLines.length - 1) { // End of line, try next line
-            newRow++;
-            newCol = 0;
-            line = newLines[newRow] || "";
+        let r = newRow;
+        let c = newCol;
+        let line = newLines[r] || "";
+
+        // Determine if we are trying to find the end of the *current* word 
+        // or the *next* word based on the initial cursor position.
+        let findNextWordEnd = false;
+        if (c < line.length && /\s/.test(line[c])) { // Started on whitespace
+            findNextWordEnd = true;
+        } else if (c < line.length) { // Started on a non-whitespace character
+            // Check if already at the end of the current word
+            let atEndOfCurrentWord = true;
+            if (c < line.length - 1 && !/\s/.test(line[c+1])) {
+                atEndOfCurrentWord = false; // Next char is part of the same word
+            }
+            if (atEndOfCurrentWord) {
+                findNextWordEnd = true; // Already at end of current, so find next
+            }
+        } else { // At end of line or on an empty line, effectively need to find next word if possible
+            findNextWordEnd = true;
         }
 
-        if (newCol < line.length) {
-            let searchingFrom = newCol;
-            // If on whitespace, skip to next non-whitespace
-            if (/\\s/.test(line[searchingFrom])) {
-                while (searchingFrom < line.length && /\\s/.test(line[searchingFrom])) {
-                    searchingFrom++;
-                }
+        if (!findNextWordEnd) {
+            // Move to the end of the CURRENT word
+            while (c < line.length - 1 && !/\s/.test(line[c+1])) {
+                c++;
             }
-            // If still in line, skip to end of current word
-            if (searchingFrom < line.length) {
-                 while (searchingFrom < line.length - 1 && !/\\s/.test(line[searchingFrom+1])) {
-                    searchingFrom++;
+            newCol = c;
+            newRow = r;
+        } else {
+            // Find the end of the NEXT word
+            // Step 1: Move past the current word and/or any initial whitespace to find the start of the next search area.
+            if (c < line.length && !/\s/.test(line[c])) { // If on a word, move to its end first
+                while (c < line.length && !/\s/.test(line[c])) {
+                    c++;
                 }
-                newCol = searchingFrom;
-            } else if (newRow < newLines.length - 1) { // Moved past all chars on current line
-                newRow++;
-                newCol = 0;
-                line = newLines[newRow] || "";
-                // Find first word end on new line
-                 let nextCol = 0;
-                 while(nextCol < line.length && /\\s/.test(line[nextCol])) { // skip leading spaces
-                     nextCol++;
-                 }
-                 if (nextCol < line.length) { // if non-space found
-                    while (nextCol < line.length - 1 && !/\\s/.test(line[nextCol+1])) {
-                        nextCol++;
+            } // Now c is on whitespace or at EOL
+            
+            // Step 2: Skip all subsequent whitespace, advancing to next line if needed.
+            let advancedToNextWordRegion = false;
+            while(!advancedToNextWordRegion){
+                if(c < line.length){
+                    if(/\s/.test(line[c])){
+                        c++;
+                    } else {
+                        advancedToNextWordRegion = true; // Found start of next word region
                     }
-                    newCol = nextCol;
-                 } else { // new line is all spaces or empty
-                    newCol = Math.max(0, line.length -1); // go to end of it
-                 }
-            } else {
-                commandExecuted = false; // cannot move
-            }
-        } else if (newRow < newLines.length - 1) { // On empty line or at very end of line string
-            newRow++;
-            newCol = 0;
-            line = newLines[newRow] || "";
-            // Find first word end on new line
-            let nextCol = 0;
-            while(nextCol < line.length && /\\s/.test(line[nextCol])) { // skip leading spaces
-                nextCol++;
-            }
-            if (nextCol < line.length) { // if non-space found
-                while (nextCol < line.length - 1 && !/\\s/.test(line[nextCol+1])) {
-                    nextCol++;
+                } else { // End of current line
+                    if (r < newLines.length - 1) {
+                        r++;
+                        c = 0;
+                        line = newLines[r] || "";
+                        if (line.length === 0 && r < newLines.length -1) { // New line is empty, skip it
+                           continue;
+                        }                        
+                        // If new line (empty or not) makes c invalid, outer loop handles it.
+                        // If new line starts with non-space, advancedToNextWordRegion will become true.
+                    } else {
+                        commandExecuted = false; // EOF
+                        newCol = Math.max(0, line.length - 1); // Stay at end of last line
+                        if(line.length === 0) newCol = 0;
+                        newRow = r;
+                        advancedToNextWordRegion = true; // Break search
+                        break;
+                    }
                 }
-                newCol = nextCol;
-            } else { // new line is all spaces or empty
-                newCol = Math.max(0, line.length -1); // go to end of it
-                if (line.length === 0) newCol = 0;
+            }
+
+            if (commandExecuted) { // If not EOF
+                 // Step 3: Now c is at the beginning of the next word. Find its end.
+                 if (c < line.length) { // Ensure c is still valid (e.g., didn't skip to an all-whitespace last line)
+                    while (c < line.length - 1 && !/\s/.test(line[c+1])) {
+                        c++;
+                    }
+                    newCol = c;
+                    newRow = r;
+                 } else { // Might happen if last line is all spaces or we skipped an empty last line to EOF
+                    commandExecuted = false;
+                    newCol = Math.max(0, line.length -1); // Position at the very end of the (potentially empty) line.
+                    if (line.length === 0) newCol = 0;
+                    newRow = r;
+                 }
             }
         }
-        else {
-           commandExecuted = false; // Cannot move
-        }
-        if (!commandExecuted && i == 0) count = 1;
+        
+        if (!commandExecuted && i === 0) count = 1; 
         break;
       }
       // More commands will be added here
