@@ -288,10 +288,16 @@ header {
   color: var(--green);
 }
 
+#levels-list .level-btn.locked {
+  color: var(--text-color-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 #levels-list .level-btn.locked .level-icon::before {
   content: "🔒"; 
   color: var(--text-color-muted);
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 #levels-list .level-btn:not(.completed):not(.locked) .level-icon::before {
@@ -822,9 +828,16 @@ footer {
   color: var(--green);
 }
 
+#levels-list .level-btn.locked {
+  color: var(--text-color-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 #levels-list .level-btn.locked .level-icon::before {
   content: "🔒"; /* Lock icon for locked */
-  opacity: 0.7;
+  color: var(--text-color-muted);
+  opacity: 0.6;
 }
 
 #levels-list .level-btn:not(.completed):not(.locked) .level-icon::before {
