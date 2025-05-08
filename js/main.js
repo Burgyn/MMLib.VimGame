@@ -217,6 +217,8 @@ function initializeTerminal() {
             currentCursorPos = result.cursor;
             
             renderEditorContent(); 
+            updateStatusBar();
+            
             console.log('term.onKey: About to call checkLevelGoal.');
             await checkLevelGoal();
         } else if (currentLevelData.allowedCommands && !currentLevelData.allowedCommands.includes(key)){
