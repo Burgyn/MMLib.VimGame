@@ -151,7 +151,7 @@ header {
 
 #levels-sidebar {
   width: var(--sidebar-width);
-  background-color: #181825; /* sidebar ešte tmavší, podľa Neovim */
+  background-color: #181825; /* sidebar even darker, according to Neovim */
   padding: 0.5rem 0.2rem;
   border-right: 1px solid var(--border-color);
   overflow-y: auto;

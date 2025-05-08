@@ -1,1 +1,1 @@
-Toto je teXt. 
+This is teXt. 
