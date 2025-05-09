@@ -188,12 +188,12 @@
       {
         "id": 15,
         "title": "Move to next character, before it (t)",
-        "description": "Move to before 'p' in private using tp.",
+        "description": "Cursor is on 'p' in 'private'. Move to before 'c' in 'count' using <code>tc</code>.",
         "startTextFile": "levels/level12_start.ts",
         "goalTextFile": "levels/level12_start.ts",
         "verify": "cursor_at_pos",
         "goalCursor": { "row": 1, "col": 9 },
-        "allowedCommands": ["t", "p", "h", "j", "k", "l"],
+        "allowedCommands": ["t", "c", "h", "j", "k", "l"],
         "startCursor": { "row": 1, "col": 2 },
         "hint": "Type <code>t</code> followed by a character to move the cursor just before that character on the current line."
       },
