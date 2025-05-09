@@ -124,32 +124,47 @@
         <ul>
           <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd> - Focus Level Explorer</li>
           <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>H</kbd> - Show this Help Modal</li>
-          <li><kbd>?</kbd> (in game) - Show Level Hint</li>
-          <li><kbd>s</kbd> Start Learning (Home Screen)</li>
-          <li><kbd>r</kbd> Show My Progress (Home Screen)</li>
-          <li><kbd>q</kbd> Quit to Home Screen</li>
+          <li><kbd>r</kbd> - Show My Progress</li>
+          <li><kbd>q</kbd> - Quit to Home Screen</li>
+          <li><kbd>s</kbd> - Start Learning (Home Screen)</li>
+          <li><kbd>?</kbd> (in game) - Show Level Hint (if available)</li>
         </ul>
-        <h4>Basic Vim Navigation:</h4>
+
+        <h4>Vim Commands & Motions:</h4>
+        <p><em>Note: Some commands might have basic implementations. Prepend with a number for count (e.g., <code>3j</code>).</em></p>
+        <h5>Movement:</h5>
         <ul>
-          <li><kbd>h</kbd> - Move cursor left</li>
-          <li><kbd>j</kbd> - Move cursor down</li>
-          <li><kbd>k</kbd> - Move cursor up</li>
-          <li><kbd>l</kbd> - Move cursor right</li>
-          <li><kbd>0</kbd> - Move cursor to start of line</li>
-          <li><kbd>$</kbd> - Move cursor to end of line</li>
+          <li><kbd>h</kbd> - Move left</li>
+          <li><kbd>l</kbd> - Move right</li>
+          <li><kbd>j</kbd> - Move down</li>
+          <li><kbd>k</kbd> - Move up</li>
           <li><kbd>w</kbd> - Move to start of next word</li>
-          <li><kbd>b</kbd> - Move to start of previous word</li>
-          <li><kbd>e</kbd> - Move to end of current/next word</li>
-          <li><kbd>gg</kbd> - Go to first line of file</li>
-          <li><kbd>G</kbd> - Go to last line of file</li>
-          <li><kbd>&lt;count&gt;</kbd> + <kbd>command</kbd> - Repeat command (e.g. <code>3j</code>, <code>2w</code>)</li>
+          <li><kbd>b</kbd> - Move to beginning of previous word</li>
+          <li><kbd>e</kbd> - Move to end of current word</li>
+          <li><kbd>0</kbd> - Move to beginning of the line</li>
+          <li><kbd>$</kbd> - Move to end of the line</li>
+          <li><kbd>g</kbd><kbd>g</kbd> - Go to the first line</li>
+          <li><kbd>G</kbd> - Go to the last line</li>
         </ul>
-        <h4>Basic Vim Editing (Examples):</h4>
+        <h5>Find in Line:</h5>
         <ul>
-          <li><kbd>x</kbd> - Delete character under cursor</li>
-          <!-- Add more as they are introduced in levels -->
+          <li><kbd>f</kbd><kbd>x</kbd> - Find character 'x' forwards</li>
+          <li><kbd>F</kbd><kbd>x</kbd> - Find character 'x' backwards</li>
+          <li><kbd>t</kbd><kbd>x</kbd> - Move to <strong>before</strong> character 'x' forwards</li>
+          <li><kbd>T</kbd><kbd>x</kbd> - Move to <strong>after</strong> character 'x' backwards</li>
+          <li><kbd>;</kbd> - Repeat last find (f, F, t, T)</li>
+          <li><kbd>,</kbd> - Repeat last find in opposite direction</li>
         </ul>
-        <p>More shortcuts will be added as you progress through the levels!</p>
+        <h5>Deletion:</h5>
+        <ul>
+          <li><kbd>d</kbd><kbd>d</kbd> - Delete current line</li>
+          <li><kbd>d</kbd><kbd>w</kbd> - Delete word (basic: to end of line)</li>
+          <li><kbd>d</kbd>+<kbd>motion</kbd> - Delete by motion (e.g., <kbd>d</kbd><kbd>$</kbd>, <kbd>d</kbd><kbd>0</kbd>, <kbd>d</kbd><kbd>f</kbd><kbd>x</kbd>)</li>
+        </ul>
+         <h5>Other:</h5>
+        <ul>
+          <li><kbd>Esc</kbd> - Exit mode / Cancel pending command or count</li>
+        </ul>
       </div>
     </div>
   </div>
