@@ -269,8 +269,8 @@ function processInput(key, lines, cursor) {
         let c = tempCol;
         let currentWordLineText = newLines[r] || "";
 
-        if (c < currentWordLineText.length && !/\\s/.test(currentWordLineText[c])) {
-            while (c < currentWordLineText.length && !/\\s/.test(currentWordLineText[c])) {
+        if (c < currentWordLineText.length && !/\s/.test(currentWordLineText[c])) {
+            while (c < currentWordLineText.length && !/\s/.test(currentWordLineText[c])) {
                 c++;
             }
         }
@@ -278,7 +278,7 @@ function processInput(key, lines, cursor) {
         let wordFound = false;
         while (!wordFound) {
             if (c < currentWordLineText.length) {
-                if (/\\s/.test(currentWordLineText[c])) {
+                if (/\s/.test(currentWordLineText[c])) {
                     c++; 
                 } else {
                     tempCol = c;
@@ -311,23 +311,23 @@ function processInput(key, lines, cursor) {
         let c = tempCol;
         let currentWordLineText = newLines[r] || "";
 
-        if (c > 0 && (/\\s/.test(currentWordLineText[c]) || (c > 0 && /\\s/.test(currentWordLineText[c-1])) ) ) {
+        if (c > 0 && (/\s/.test(currentWordLineText[c]) || (c > 0 && /\s/.test(currentWordLineText[c-1])) ) ) {
             c--;
         }
-        else if (c === 0 && r > 0 && ( (currentWordLineText.length === 0) || (currentWordLineText.length > 0 && /\\s/.test(currentWordLineText[0])) ) ) {
-        } else if (c > 0 && !/\\s/.test(currentWordLineText[c]) && /\\s/.test(currentWordLineText[c-1]) ){
+        else if (c === 0 && r > 0 && ( (currentWordLineText.length === 0) || (currentWordLineText.length > 0 && /\s/.test(currentWordLineText[0])) ) ) {
+        } else if (c > 0 && !/\s/.test(currentWordLineText[c]) && /\s/.test(currentWordLineText[c-1]) ){
             c--; 
         }
 
         let wordFound = false;
         while (!wordFound) {
             if (c >= 0 && c < currentWordLineText.length) {
-                if (/\\s/.test(currentWordLineText[c])) {
+                if (/\s/.test(currentWordLineText[c])) {
                     c--; 
                     if (c < 0) { 
                     }
                 } else {
-                    while (c >= 0 && !/\\s/.test(currentWordLineText[c])) {
+                    while (c >= 0 && !/\s/.test(currentWordLineText[c])) {
                         c--;
                     }
                     tempCol = c + 1; 
@@ -360,11 +360,11 @@ function processInput(key, lines, cursor) {
         let line = newLines[r] || "";
         let findNextWordEnd = false;
 
-        if (c < line.length && /\\s/.test(line[c])) { 
+        if (c < line.length && /\s/.test(line[c])) { 
             findNextWordEnd = true;
         } else if (c < line.length) { 
             let atEndOfCurrentWord = true;
-            if (c < line.length - 1 && !/\\s/.test(line[c+1])) {
+            if (c < line.length - 1 && !/\s/.test(line[c+1])) {
                 atEndOfCurrentWord = false; 
             }
             if (atEndOfCurrentWord) {
@@ -375,14 +375,14 @@ function processInput(key, lines, cursor) {
         }
 
         if (!findNextWordEnd) {
-            while (c < line.length - 1 && !/\\s/.test(line[c+1])) {
+            while (c < line.length - 1 && !/\s/.test(line[c+1])) {
                 c++;
             }
             tempCol = c;
             tempRow = r;
         } else {
-            if (c < line.length && !/\\s/.test(line[c])) { 
-                while (c < line.length && !/\\s/.test(line[c])) {
+            if (c < line.length && !/\s/.test(line[c])) { 
+                while (c < line.length && !/\s/.test(line[c])) {
                     c++;
                 }
             } 
@@ -390,7 +390,7 @@ function processInput(key, lines, cursor) {
             let advancedToNextWordRegion = false;
             while(!advancedToNextWordRegion){
                 if(c < line.length){
-                    if(/\\s/.test(line[c])){
+                    if(/\s/.test(line[c])){
                         c++;
                     } else {
                         advancedToNextWordRegion = true; 
@@ -416,7 +416,7 @@ function processInput(key, lines, cursor) {
 
             if (commandExecuted) { 
                  if (c < line.length) { 
-                    while (c < line.length - 1 && !/\\s/.test(line[c+1])) {
+                    while (c < line.length - 1 && !/\s/.test(line[c+1])) {
                         c++;
                     }
                     tempCol = c;
