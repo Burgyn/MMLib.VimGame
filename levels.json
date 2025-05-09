@@ -156,9 +156,9 @@
         "startTextFile": "levels/level11_start.ts",
         "goalTextFile": "levels/level11_start.ts",
         "verify": "cursor_at_pos",
-        "goalCursor": { "row": 3, "col": 0 },
+        "goalCursor": { "row": 4, "col": 0 },
         "allowedCommands": ["%", "h", "j", "k", "l"],
-        "startCursor": { "row": 0, "col": 58 },
+        "startCursor": { "row": 0, "col": 63 },
         "hint": "Press <code>%</code> to jump to the matching parenthesis, bracket, or brace."
       },
       {
