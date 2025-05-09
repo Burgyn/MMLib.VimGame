@@ -146,8 +146,69 @@
   },
   {
     "id": "chapter3",
-    "title": "3. More Movement (Placeholder)",
-    "isOpen": false,
-    "levels": []
+    "title": "3. Advanced Movement (TypeScript)",
+    "isOpen": true,
+    "levels": [
+      {
+        "id": 12,
+        "title": "Move to matching parenthesis/bracket/brace (%)",
+        "description": "Cursor is on an opening brace '{'. Move to the matching closing brace '}' using <code>%</code>.",
+        "startTextFile": "levels/level11_start.ts",
+        "goalTextFile": "levels/level11_start.ts",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 3, "col": 0 },
+        "allowedCommands": ["%", "h", "j", "k", "l"],
+        "startCursor": { "row": 0, "col": 58 },
+        "hint": "Press <code>%</code> to jump to the matching parenthesis, bracket, or brace."
+      },
+      {
+        "id": 13,
+        "title": "Find next character (f)",
+        "description": "Cursor is at the beginning of the line. Move to the first occurrence of the character 'c' using <code>fc</code>.",
+        "startTextFile": "levels/level12_start.ts",
+        "goalTextFile": "levels/level12_start.ts",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 0, "col": 6 },
+        "allowedCommands": ["f", "c", "h", "j", "k", "l"],
+        "startCursor": { "row": 0, "col": 0 },
+        "hint": "Type <code>f</code> followed by the character you want to find on the current line."
+      },
+      {
+        "id": 14,
+        "title": "Find previous character (F)",
+        "description": "Cursor is at the end of 'constructor'. Move to the previous occurrence of 's' using <code>Fs</code>.",
+        "startTextFile": "levels/level12_start.ts",
+        "goalTextFile": "levels/level12_start.ts",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 2, "col": 5 },
+        "allowedCommands": ["F", "s", "h", "j", "k", "l"],
+        "startCursor": { "row": 2, "col": 14 },
+        "hint": "Type <code>F</code> followed by the character to find backwards on the current line."
+      },
+      {
+        "id": 15,
+        "title": "Move to next character, before it (t)",
+        "description": "Move to before 'p' in private using tp.",
+        "startTextFile": "levels/level12_start.ts",
+        "goalTextFile": "levels/level12_start.ts",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 1, "col": 9 },
+        "allowedCommands": ["t", "p", "h", "j", "k", "l"],
+        "startCursor": { "row": 1, "col": 2 },
+        "hint": "Type <code>t</code> followed by a character to move the cursor just before that character on the current line."
+      },
+      {
+        "id": 16,
+        "title": "Move to previous character, after it (T)",
+        "description": "Cursor is at the end of the line (after '0;'). Move to just after the ':' character using <code>T:</code>.",
+        "startTextFile": "levels/level12_start.ts",
+        "goalTextFile": "levels/level12_start.ts",
+        "verify": "cursor_at_pos",
+        "goalCursor": { "row": 1, "col": 19 },
+        "allowedCommands": ["T", ":", "h", "j", "k", "l"],
+        "startCursor": { "row": 1, "col": 26 },
+        "hint": "Type <code>T</code> followed by a character to move the cursor just after that character (searching backwards) on the current line."
+      }
+    ]
   }
 ] 

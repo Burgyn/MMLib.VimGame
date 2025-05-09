@@ -197,14 +197,6 @@ async function initializeGame() {
     const anyModalVisible = helpModalVisible || progressModalVisible; // Extend with other modals if any
 
     if (!anyModalVisible && !event.defaultPrevented) {
-      // Check again for vimcore waiting, specifically for single char shortcuts
-      if (window.vimcore && window.vimcore.isWaitingForMotionOrTargetChar && 
-          key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey && key !== 'escape') {
-          if (key === 'r' || key === 'q' || key === 's') { // Explicitly list clashing single-key shortcuts
-            return;
-          }
-      }
-
       if (key === 'r') {
         console.log("Global 'r' key pressed for My Progress");
         showProgressModal();
