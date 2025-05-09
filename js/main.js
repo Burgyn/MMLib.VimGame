@@ -348,6 +348,9 @@ function initializeTerminal() {
         return;
     }
 
+    // --- START: Key Filtering and Propagation Control for term.onKey --- 
+    // If vimcore is waiting for a specific key, and the current key is suitable,
+    // it's definitely for vimcore. Stop propagation.
     if (window.vimcore && window.vimcore.isWaitingForMotionOrTargetChar) {
         if (e.key.length === 1 || e.key === 'Escape') {
             console.log('term.onKey: vimcore is waiting, key intended for vimcore. Stopping propagation.');
@@ -355,22 +358,46 @@ function initializeTerminal() {
             e.stopPropagation();
             // Proceed to send the key to vimcore below
         } else {
-            // If vimcore is waiting, but it's a multi-char key not Escape or a modified key that wasn't caught by global handlers.
-            // This case should be rare if global handlers for Ctrl/Alt/Meta work correctly.
-            // We might want to preventDefault/stopPropagation here too to be safe, 
-            // or return if it's definitely not for vimcore.
-            // For now, let it pass to vimcore which will likely ignore it.
-        }
-    } else {
-        // Vimcore is NOT waiting. Check for global shortcut modifiers that might conflict with Vim's single key commands.
-        // This is a fallback if document-level listeners didn't catch them first.
-        if ((e.ctrlKey || e.altKey || e.metaKey) && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta' && e.key !== 'Shift') {
-            console.log('term.onKey: Modifier key (Ctrl/Alt/Meta) detected. Assuming not for Vimcore if it reached here.');
-            // e.preventDefault(); // Optional: if we are sure no xterm/vim function uses this combo
-            // e.stopPropagation(); // Optional
+            // Vimcore is waiting, but this key is not a single char or Escape (e.g. F5).
+            // It's unlikely for vimcore. We can choose to stop it or let it bubble.
+            // Stopping it might be safer to prevent unexpected global shortcuts.
+            console.log('term.onKey: vimcore waiting, but key is special. Stopping and ignoring for vimcore.');
+            e.preventDefault();
+            e.stopPropagation();
             return; 
         }
+    } else {
+        // Vimcore is NOT waiting. 
+        // If it's a Ctrl/Alt/Meta modified key (and not just the modifier itself being pressed),
+        // assume it's a global shortcut and should NOT be processed by vimcore. Let it bubble.
+        if ((e.ctrlKey || e.altKey || e.metaKey) && 
+            !(e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta' || e.key === 'Shift')) {
+            console.log('term.onKey: Modifier key (Ctrl/Alt/Meta) + char detected. Letting it bubble for global shortcuts.');
+            return; // Let browser/global listeners handle it.
+        }
+        // For any other key that reaches here (single chars, Shift+char, Escape, Tab, Enter, etc.)
+        // when vimcore is NOT waiting for a multi-key sequence part, we assume it *could* be a Vim command.
+        // So, we should prevent default browser actions and stop it from bubbling to global document listeners
+        // that might also react to simple keys like 'r', 'q'.
+        // Escape is a special case; it might be used by Vim or by global handlers (like closing modals).
+        // The global handlers for modals check if a modal is open first.
+        if (e.key !== 'Escape') { // For non-Escape keys that are candidates for Vim commands
+             console.log(`term.onKey: Key '${e.key}' is a candidate for Vim. Stopping propagation.`);
+             e.preventDefault();
+             e.stopPropagation();
+        } else {
+            // If it IS Escape, and vimcore is not waiting, it might be for closing a modal.
+            // The global Escape handlers for modals should take precedence if a modal is open.
+            // If no modal is open, Escape will be passed to vimcore.processInput.
+            // We don't unconditionally stopPropagation for Escape here to allow modals to close.
+            // vimcore.processInput itself will handle Escape for its own state clearing.
+             console.log('term.onKey: Escape key detected. Allowing potential modal close, then to Vimcore.');
+             // No stopPropagation here to allow global modal escape to work.
+             // e.preventDefault() might still be useful if Escape has a default browser action we want to avoid
+             // but xterm usually handles Escape well. Let's be cautious.
+        }
     }
+    // --- END: Key Filtering and Propagation Control --- 
 
     let vimKey = key;
     if (e.key.length > 1) { 
