@@ -5,7 +5,9 @@ window.vimcore = {
   getLinesFromXterm,
   setCursorInXterm,
   activeCount: "", // Stores the pending count for commands
-  pendingKeystrokes: "" // Stores pending non-numeric keystrokes (e.g., 'd', 'c', 'f')
+  pendingKeystrokes: "", // Stores pending non-numeric keystrokes (e.g., 'd', 'c', 'f', 'F', 't', 'T')
+  lastFindCommand: null, // Stores { type: 'f'/'F'/'t'/'T', char: 'x', count: 1, forwardForSemicolon: true }
+  isWaitingForMotionOrTargetChar: false // Added this flag
 };
 
 /**
@@ -45,6 +47,15 @@ function isMotionKey(key) {
 }
 
 /**
+ * Checks if a line is blank (empty or only whitespace).
+ * @param {string} line The line to check.
+ * @returns {boolean} True if the line is blank, false otherwise.
+ */
+function isLineBlank(line) {
+  return line.trim() === '';
+}
+
+/**
  * Spracuje vstup (kláves) a vráti nový stav editora.
  * @param {string} key - Stlačená klávesa (napr. \'h\', \'j\', \'0\', \'$\').
  * @param {string[]} lines - Aktuálny obsah editora ako pole riadkov.
@@ -59,15 +70,15 @@ function processInput(key, lines, cursor) {
   let newRow = row;
   let newCol = col;
 
-  // If an operator is pending
+  // If an operator or find command is pending
   if (window.vimcore.pendingKeystrokes) {
-    const operator = window.vimcore.pendingKeystrokes;
-    const motionOrSecondKey = key;
+    const operatorOrFinder = window.vimcore.pendingKeystrokes;
+    const motionOrTargetChar = key;
     let count = parseInt(window.vimcore.activeCount || "1", 10);
     if (isNaN(count) || count < 1) count = 1;
 
-    if (operator === 'd') {
-      if (motionOrSecondKey === 'd') { // 'dd' command
+    if (operatorOrFinder === 'd') {
+      if (motionOrTargetChar === 'd') { // 'dd' command
         if (newLines.length > 0) {
           for (let i = 0; i < count && newRow < newLines.length; i++) {
             newLines.splice(newRow, 1); // Delete line at newRow
@@ -81,10 +92,10 @@ function processInput(key, lines, cursor) {
           }
           commandExecuted = true;
         }
-      } else if (isMotionKey(motionOrSecondKey) && motionOrSecondKey !== 'g') { // 'dw', 'de', 'd0', 'd$' etc. (excluding 'dg' for now)
+      } else if (isMotionKey(motionOrTargetChar) && motionOrTargetChar !== 'g') { // 'dw', 'de', 'd0', 'd$' etc. (excluding 'dg' for now)
         // Simplified: 'dw' will delete from cursor to start of next word (inclusive of space if any)
         // This is a placeholder for more precise motion calculation.
-        if (motionOrSecondKey === 'w') {
+        if (motionOrTargetChar === 'w') {
             // Very basic 'dw': delete to end of line for now as a placeholder
             if (newLines[newRow] !== undefined) {
                 for(let i=0; i<count; i++) { // apply count times
@@ -114,26 +125,29 @@ function processInput(key, lines, cursor) {
             }
         } else {
             // For other d+motion, just log and act as if processed to clear state
-            console.log(`VimCore: Operator 'd' with motion '${motionOrSecondKey}' (count ${count}) - NOT FULLY IMPLEMENTED.`);
+            console.log(`VimCore: Operator 'd' with motion '${motionOrTargetChar}' (count ${count}) - NOT FULLY IMPLEMENTED.`);
             commandExecuted = true; // To clear state
         }
-      } else if (motionOrSecondKey === 'Escape') { // Cancel pending 'd'
+      } else if (motionOrTargetChar === 'Escape') { // Cancel pending 'd'
         // State clearing will happen in the main `if (commandExecuted)` block or by main.js
         window.vimcore.pendingKeystrokes = "";
         window.vimcore.activeCount = "";
+        window.vimcore.isWaitingForMotionOrTargetChar = false;
         return { lines, cursor, commandProcessed: false }; // Let main.js handle escape UI
       } else {
         // Invalid sequence after 'd'
-        console.log(`VimCore: Invalid key '${motionOrSecondKey}' after 'd'.`);
+        console.log(`VimCore: Invalid key '${motionOrTargetChar}' after 'd'.`);
         // Bell sound should be handled by main.js if desired
         window.vimcore.pendingKeystrokes = "";
         window.vimcore.activeCount = "";
+        window.vimcore.isWaitingForMotionOrTargetChar = false;
         return { lines, cursor, commandProcessed: false }; // No actual Vim command processed
       }
 
       if (commandExecuted) {
         window.vimcore.pendingKeystrokes = "";
         window.vimcore.activeCount = "";
+        window.vimcore.isWaitingForMotionOrTargetChar = false;
         // Final cursor validation after 'dd' or 'dw'
         if (newLines.length === 0) {
             newRow = 0; newCol = 0;
@@ -144,20 +158,145 @@ function processInput(key, lines, cursor) {
         }
         return { lines: newLines, cursor: { row: newRow, col: newCol }, commandProcessed: true };
       }
+    } else if (operatorOrFinder === 'f' || operatorOrFinder === 'F' || operatorOrFinder === 't' || operatorOrFinder === 'T') {
+        if (motionOrTargetChar === 'Escape') {
+            window.vimcore.pendingKeystrokes = "";
+            window.vimcore.activeCount = "";
+            window.vimcore.isWaitingForMotionOrTargetChar = false;
+            return { lines, cursor, commandProcessed: false };
+        }
+        
+        const isFindType = (operatorOrFinder === 'f' || operatorOrFinder === 'F');
+        const isTillType = (operatorOrFinder === 't' || operatorOrFinder === 'T');
+        const findForward = (operatorOrFinder === 'f' || operatorOrFinder === 't');
+
+        let found = false;
+        let finalR = row;
+        let finalC = col;
+        let targetCharFoundAt = -1; // Store the actual column where the character was found
+
+        const lineText = newLines[row] || "";
+        let searchFromCol = col; // This will be adjusted for each iteration of count
+
+        for (let k = 0; k < count; k++) { // Apply count times
+            let iterationFound = false;
+            let iterationTargetCharFoundAt = -1;
+            let searchStartOffset = findForward ? 1 : -1;
+            let currentSearchCol = searchFromCol + searchStartOffset;
+
+            if (findForward) {
+                for (let cScan = currentSearchCol; cScan < lineText.length; cScan++) {
+                    if (lineText[cScan] === motionOrTargetChar) {
+                        iterationTargetCharFoundAt = cScan;
+                        iterationFound = true;
+                        break;
+                    }
+                }
+            } else { // search backward
+                for (let cScan = currentSearchCol; cScan >= 0; cScan--) {
+                    if (lineText[cScan] === motionOrTargetChar) {
+                        iterationTargetCharFoundAt = cScan;
+                        iterationFound = true;
+                        break;
+                    }
+                }
+            }
+
+            if (iterationFound) {
+                targetCharFoundAt = iterationTargetCharFoundAt;
+                if (isFindType) {
+                    searchFromCol = targetCharFoundAt; // For next iteration of f/F, search from the found char
+                } else if (isTillType) {
+                    // For next iteration of t/T, search from one step before/after the found char, 
+                    // effectively from where the cursor would land.
+                    searchFromCol = findForward ? targetCharFoundAt -1 : targetCharFoundAt + 1;
+                    if (findForward && searchFromCol < col) { // safety, should not happen if logic correct
+                         iterationFound = false; // Cannot move for t if char is current or before
+                    } else if (!findForward && searchFromCol > col) { // safety
+                         iterationFound = false; // Cannot move for T if char is current or after
+                    }
+                }
+                found = true; // At least one iteration found something
+            } else {
+                found = false; // if any of the counts fail, the whole command fails
+                break; 
+            }
+        }
+
+        if (found) {
+            newRow = finalR; // Stays on the same line
+            if (isFindType) {
+                newCol = targetCharFoundAt;
+            } else { // isTillType
+                if (findForward) {
+                    // Move to just before the character
+                    // If targetCharFoundAt is same as original col + 1, means char is immediately next
+                    // Vim's 't{char}' when {char} is the next char will not move.
+                    if (targetCharFoundAt > col) { // Ensure we are moving forward
+                         newCol = targetCharFoundAt - 1;
+                    } else {
+                        found = false; // Cannot move, e.g. cursor on 'a', command 'tb', text "ab"
+                    }
+                } else { // for 'T', searching backward
+                    // Move to just after the character
+                    if (targetCharFoundAt < col) { // Ensure we are moving backward
+                        newCol = targetCharFoundAt + 1;
+                    } else {
+                        found = false; // Cannot move
+                    }
+                }
+            }
+            if (!found) commandExecuted = false; // if till type couldn't move
+            else commandExecuted = true;
+
+            if (commandExecuted) {
+                window.vimcore.lastFindCommand = {
+                    type: operatorOrFinder, // 'f', 'F', 't', or 'T'
+                    char: motionOrTargetChar,
+                    count: 1, // Semicolon/comma always do 1 find from the perspective of lastFindCommand
+                    forwardForSemicolon: findForward 
+                };
+            }
+        } else {
+            commandExecuted = false;
+        }
+        window.vimcore.pendingKeystrokes = "";
+        window.vimcore.activeCount = "";
+        window.vimcore.isWaitingForMotionOrTargetChar = false;
+        return { lines: newLines, cursor: { row: newRow, col: newCol }, commandProcessed: commandExecuted };
+    } else {
+        // If pendingKeystrokes was set but current key didn't complete it validly
+        console.log(`VimCore: Operator/Finder '${operatorOrFinder}' with key '${motionOrTargetChar}' - not a valid combo or not implemented.`);
+        window.vimcore.pendingKeystrokes = "";
+        window.vimcore.activeCount = "";
+        window.vimcore.isWaitingForMotionOrTargetChar = false;
+        return { lines, cursor, commandProcessed: false };
     }
-    // Add other operators like 'c', 'y' here in future
-    // If here, pendingKeystrokes was set but current key didn't complete it validly (or was escape)
-    // and not handled above. This case should ideally be caught by "else" above.
-    // For safety, if commandExecuted is false, means it was not a valid combo.
-    // Reset pending state.
+
+    // This part below for dd or dw might need restructuring if it was inside the 'd' block only
+    if (commandExecuted) { // This was originally for 'd' operator, check if still needed here broadly
+        window.vimcore.pendingKeystrokes = "";
+        window.vimcore.activeCount = "";
+        window.vimcore.isWaitingForMotionOrTargetChar = false;
+        // Final cursor validation
+        if (newLines.length === 0) {
+            newRow = 0; newCol = 0;
+        } else {
+            newRow = Math.max(0, Math.min(newRow, newLines.length - 1));
+            const finalLineLen = (newLines[newRow] || "").length;
+            newCol = Math.max(0, Math.min(newCol, finalLineLen > 0 ? finalLineLen -1 : 0));
+        }
+        return { lines: newLines, cursor: { row: newRow, col: newCol }, commandProcessed: true };
+    }
+    // Reset pending state if not handled
     window.vimcore.pendingKeystrokes = ""; 
-    // activeCount might still be valid for a *new* command starting with 'key'
-    // return { lines, cursor, commandProcessed: false }; // Indicate nothing happened for this key yet
+    window.vimcore.activeCount = "";
+    window.vimcore.isWaitingForMotionOrTargetChar = false;
+    return { lines, cursor, commandProcessed: false }; // Indicate nothing happened for this key yet
 
-} // End of pendingKeystrokes handling
+  } // End of pendingKeystrokes handling
 
-
-  // Handle digit input for counts (if no operator was pending and handled above)
+  // Handle digit input for counts
   if (key >= '0' && key <= '9') {
     if (key === '0' && window.vimcore.activeCount === "") {
       // '0' is a command (motion), not start of count, unless a count is already active.
@@ -169,12 +308,12 @@ function processInput(key, lines, cursor) {
     }
   }
 
-  // Handle keys that START an operator sequence (if no operator was already pending)
-  // This must come AFTER digit handling, so '2d' works (activeCount="2", then 'd' makes pendingKeystrokes="d")
-  if (key === 'd' || key === 'c' || key === 'y') { // Add 'g' and others later
+  // Handle keys that START an operator sequence or find command
+  if (['d', 'c', 'y', 'f', 'F', 't', 'T'].includes(key)) { 
     window.vimcore.pendingKeystrokes = key;
-    // activeCount (e.g., "2" from "2d") should persist.
-    return { lines: newLines, cursor, commandProcessed: false }; // Operator started, wait for motion/next key
+    window.vimcore.isWaitingForMotionOrTargetChar = true; // Set flag
+    // activeCount should persist.
+    return { lines: newLines, cursor, commandProcessed: false }; 
   }
 
 
@@ -432,11 +571,302 @@ function processInput(key, lines, cursor) {
         if (!commandExecuted && i === 0 && count > 1) count = 1; 
         break;
       }
+      case '{': {
+        commandExecuted = true;
+        let r = tempRow;
+        // Find the first non-blank line when moving upwards from current line
+        // If current line is blank, move up until a non-blank line is found (start of current/prev paragraph)
+        // Then, move up again until a blank line is found (end of prev-prev paragraph)
+        // Then, move up again until a non-blank line is found (start of prev paragraph)
+
+        // First, skip any blank lines upwards from current position to find end of current/previous paragraph
+        while (r > 0 && isLineBlank(newLines[r])) {
+          r--;
+        }
+        // Now r is on a non-blank line (or r is 0).
+        // If we started on a blank line, r is now at the end of the previous paragraph.
+        // If we started on a non-blank line, r is still on the current line.
+
+        // Skip the current paragraph (non-blank lines) upwards
+        while (r > 0 && !isLineBlank(newLines[r])) {
+          r--;
+        }
+        // Now r is on a blank line separating paragraphs, or r is 0 if at start of file.
+        // If r is 0 and it's not blank, it means the first paragraph starts at line 0.
+        
+        // If r is 0 and newLines[0] is not blank, we are already at the target.
+        if (r === 0 && !isLineBlank(newLines[0])) {
+            // do nothing, already at the first paragraph
+        } else {
+            // Skip any further blank lines upwards to find the start of the desired paragraph
+            while (r > 0 && isLineBlank(newLines[r])) {
+              r--;
+            }
+        }
+        
+        // After the loops, r should be at the start of the previous paragraph or line 0.
+        tempRow = r;
+        tempCol = 0;
+        if (tempRow < 0) tempRow = 0; // Should not happen with r > 0 checks but as safeguard
+
+        // If after all, we are still on a blank line and not at the top, try to find the previous non-blank.
+        // This handles cases where a count might try to go past the beginning into multiple blank lines.
+        while(tempRow > 0 && isLineBlank(newLines[tempRow])) {
+            tempRow--;
+        }
+        tempCol = 0;
+        break;
+      }
+      case '}': {
+        commandExecuted = true;
+        let r = tempRow;
+
+        // Skip current paragraph (non-blank lines) downwards
+        while (r < newLines.length - 1 && !isLineBlank(newLines[r])) {
+            r++;
+        }
+        // Now r is on a blank line or at the end of the file.
+
+        // Skip blank lines downwards to find the start of the next paragraph
+        while (r < newLines.length - 1 && isLineBlank(newLines[r])) {
+            r++;
+        }
+        // Now r is on a non-blank line (start of next paragraph) or at the end of the file.
+
+        // If r is at the end and the last line is blank, we might need to adjust
+        // or if we are on a blank line but there are no more non-blank lines.
+        if (r === newLines.length - 1 && isLineBlank(newLines[r])) {
+            // If we scanned to the very last line and it's blank,
+            // we should try to find the last non-blank line upwards if the intention
+            // was to go to the "start" of a paragraph that might have trailing blanks.
+            // However, Vim's '}' typically goes to the *next* paragraph start.
+            // If the last line is blank, there's no "next" paragraph start *on or after* it.
+            // Vim would stay on the last line if it's the only line or last non-blank.
+            // Let's try to find the start of the *current* paragraph if `r` is blank
+            // or the last non-blank line if all else fails.
+
+            let originalR = tempRow;
+            let lastNonBlankR = originalR;
+            for(let k = newLines.length -1; k >=0; k--){
+                if(!isLineBlank(newLines[k])){
+                    lastNonBlankR = k;
+                    break;
+                }
+            }
+             // If current tempRow was already on/after the last actual content,
+             // and we are trying to go further down, but only blanks are left,
+             // Vim behaviour for `}` often stays on the last non-blank line if no *next* paragraph.
+             // Or, if the buffer ends with blank lines, `}` might go to the very last line.
+             // For now, let's make it so if `r` ends up blank, it goes to that blank line.
+             // If it was already the last line, it stays.
+        }
+
+
+        tempRow = r;
+        tempCol = 0;
+        if (tempRow >= newLines.length) tempRow = newLines.length - 1;
+
+
+        // If after all, we are still on a blank line and not at the bottom, try to find the next non-blank.
+        // This handles cases where a count might try to go past the end into multiple blank lines.
+         while(tempRow < newLines.length -1 && isLineBlank(newLines[tempRow])) {
+            tempRow++;
+        }
+        tempCol = 0;
+
+        break;
+      }
+      case '%': {
+        commandExecuted = true;
+        let r = tempRow;
+        let c = tempCol;
+        const charUnderCursor = newLines[r] ? newLines[r][c] : null;
+        let openChar = null, closeChar = null;
+        let searchForward = true;
+
+        const pairs = { '(': ')', ')': '(', '[': ']', ']': '[', '{': '}', '}': '{', };
+
+        if (pairs[charUnderCursor]) {
+            openChar = (charUnderCursor === '(' || charUnderCursor === '[' || charUnderCursor === '{') ? charUnderCursor : pairs[charUnderCursor];
+            closeChar = pairs[openChar];
+            searchForward = (charUnderCursor === openChar);
+        } else {
+            // Search for the next parenthesis on the line if not on one
+            let foundParen = false;
+            for (let scanCol = c; scanCol < (newLines[r] ? newLines[r].length : 0); scanCol++) {
+                if (pairs[newLines[r][scanCol]]) {
+                    c = scanCol;
+                    openChar = (newLines[r][scanCol] === '(' || newLines[r][scanCol] === '[' || newLines[r][scanCol] === '{') ? newLines[r][scanCol] : pairs[newLines[r][scanCol]];
+                    closeChar = pairs[openChar];
+                    searchForward = (newLines[r][scanCol] === openChar);
+                    foundParen = true;
+                    break;
+                }
+            }
+            if (!foundParen) {
+                commandExecuted = false; // No parenthesis found on the line
+                break;
+            }
+        }
+
+        let balance = 0;
+        if (searchForward) {
+            let currentR = r;
+            let currentC = c;
+            let eof = false;
+            while (!eof) {
+                const lineToSearch = newLines[currentR] || "";
+                for (let scanC = (currentR === r ? currentC : 0) ; scanC < lineToSearch.length; scanC++) {
+                    if (lineToSearch[scanC] === openChar) {
+                        balance++;
+                    } else if (lineToSearch[scanC] === closeChar) {
+                        balance--;
+                        if (balance === 0) {
+                            tempRow = currentR;
+                            tempCol = scanC;
+                            eof = true; // Found match
+                            break;
+                        }
+                    }
+                }
+                if (eof) break;
+                currentR++;
+                if (currentR >= newLines.length) {
+                    commandExecuted = false; // No match found by end of file
+                    eof = true;
+                }
+            }
+        } else { // Search backward
+            let currentR = r;
+            let currentC = c;
+            let bof = false; // beginning of file
+            while (!bof) {
+                const lineToSearch = newLines[currentR] || "";
+                for (let scanC = (currentR === r ? currentC : lineToSearch.length - 1) ; scanC >= 0; scanC--) {
+                    if (lineToSearch[scanC] === closeChar) { // when searching backward, original char is closeChar
+                        balance++;
+                    } else if (lineToSearch[scanC] === openChar) {
+                        balance--;
+                        if (balance === 0) {
+                            tempRow = currentR;
+                            tempCol = scanC;
+                            bof = true; // Found match
+                            break;
+                        }
+                    }
+                }
+                if (bof) break;
+                currentR--;
+                if (currentR < 0) {
+                    commandExecuted = false; // No match found by beginning of file
+                    bof = true;
+                }
+            }
+        }
+        break;
+      }
       case 'g': // Special handling for 'g' might be needed if 'gg' is not passed as a single key
         // For now, 'g' alone does nothing unless 'gg' logic is elsewhere or passed as 'gg'
         // If 'gg' is handled by main.js sending "gg", this case might not be hit for that.
         commandExecuted = false; // 'g' alone does nothing unless part of 'gg'
         break;
+      case ';': {
+        if (window.vimcore.lastFindCommand) {
+            const { type, char, count: findCount, forwardForSemicolon } = window.vimcore.lastFindCommand;
+            // For ';' use forwardForSemicolon directly
+            const findForward = forwardForSemicolon;
+            let found = false;
+            let currentR = newRow; // Use newRow/newCol from current state
+            let currentC = newCol;
+            const lineText = newLines[currentR] || "";
+
+            for (let k = 0; k < findCount; k++) { // lastFindCommand.count is usually 1
+                let searchStartCol = findForward ? currentC + 1 : currentC - 1;
+                let tempFoundC = -1;
+
+                if (findForward) {
+                    for (let cScan = searchStartCol; cScan < lineText.length; cScan++) {
+                        if (lineText[cScan] === char) {
+                            tempFoundC = cScan;
+                            break;
+                        }
+                    }
+                } else { // search backward
+                    for (let cScan = searchStartCol; cScan >= 0; cScan--) {
+                        if (lineText[cScan] === char) {
+                            tempFoundC = cScan;
+                            break;
+                        }
+                    }
+                }
+                if (tempFoundC !== -1) {
+                    currentC = tempFoundC;
+                    found = true;
+                } else {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                newCol = currentC; // newRow doesn't change for f/F/;/
+                commandExecuted = true;
+                // lastFindCommand remains the same for subsequent ; or ,
+            } else {
+                commandExecuted = false;
+            }
+        } else {
+            commandExecuted = false; // No last find command to repeat
+        }
+        break;
+      }
+      case ',': {
+        if (window.vimcore.lastFindCommand) {
+            const { type, char, count: findCount, forwardForSemicolon } = window.vimcore.lastFindCommand;
+            // For ',' use INVERSE of forwardForSemicolon
+            const findForward = !forwardForSemicolon;
+            let found = false;
+            let currentR = newRow;
+            let currentC = newCol;
+            const lineText = newLines[currentR] || "";
+
+            for (let k = 0; k < findCount; k++) {
+                let searchStartCol = findForward ? currentC + 1 : currentC - 1;
+                let tempFoundC = -1;
+
+                if (findForward) {
+                    for (let cScan = searchStartCol; cScan < lineText.length; cScan++) {
+                        if (lineText[cScan] === char) {
+                            tempFoundC = cScan;
+                            break;
+                        }
+                    }
+                } else { // search backward
+                    for (let cScan = searchStartCol; cScan >= 0; cScan--) {
+                        if (lineText[cScan] === char) {
+                            tempFoundC = cScan;
+                            break;
+                        }
+                    }
+                }
+                if (tempFoundC !== -1) {
+                    currentC = tempFoundC;
+                    found = true;
+                } else {
+                    found = false;
+                    break;
+                }
+            }
+            if (found) {
+                newCol = currentC;
+                commandExecuted = true;
+            } else {
+                commandExecuted = false;
+            }
+        } else {
+            commandExecuted = false;
+        }
+        break;
+      }
       default:
         commandExecuted = false; 
         break;
@@ -485,14 +915,12 @@ function processInput(key, lines, cursor) {
         newCol = Math.max(0, newCol); // Ensure col is not negative
     }
     window.vimcore.activeCount = ""; // Clear count after successful standalone command
+    window.vimcore.isWaitingForMotionOrTargetChar = false; // Should be cleared when pendingKeystrokes is cleared
   } else {
-    // If no command was executed (e.g., unknown key, or an operator key that didn't complete)
-    // Do not clear activeCount if it was just a sequence of digits.
-    // If it was an unknown key after digits, then clear activeCount.
-    if (! (key >= '0' && key <= '9') ) { // If key is not a digit
-         // and it wasn't 'd', 'c', 'y' (which return early if starting sequence)
-        if (!['d', 'c', 'y'].includes(key)) {
-             window.vimcore.activeCount = ""; // Clear for unknown non-digit, non-operator-starting key
+    if (! (key >= '0' && key <= '9') ) { 
+        if (!['d', 'c', 'y', 'f', 'F', 't', 'T'].includes(key)) { // if not a pending starter key
+             window.vimcore.activeCount = ""; 
+             // window.vimcore.isWaitingForMotionOrTargetChar = false; // only if it was an unknown key that didn't start a sequence
         }
     }
   }

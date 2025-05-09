@@ -161,6 +161,19 @@ async function initializeGame() {
   document.addEventListener('keydown', (event) => {
     const key = event.key.toLowerCase();
 
+    // If Vim core is waiting for a motion or target character for a command (e.g., after 'f', 'd'),
+    // and the current key is a single character (likely the target char or motion),
+    // then don't process global shortcuts that might conflict.
+    // Allow Escape to pass through for VimCore to handle, and allow shortcuts with modifiers (Ctrl, Shift, Alt, Meta).
+    if (window.vimcore && window.vimcore.isWaitingForMotionOrTargetChar && 
+        key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey && key !== 'escape') {
+        // Check if the key is NOT shift itself, but could be a character produced by shift (e.g. '$', 'G')
+        // This check is a bit broad; the main idea is to let vimcore handle the next key if it's waiting.
+        // If shift is pressed with a letter, vimcore should receive the uppercase letter.
+        // If it is a global shortcut like Ctrl+Shift+H, the `!event.ctrlKey` above handles it.
+        return; 
+    }
+
     // --- Modal Escape Handling (Highest Priority) ---
     if (key === 'escape') {
       const currentHelpModal = document.getElementById('help-modal');
@@ -184,6 +197,14 @@ async function initializeGame() {
     const anyModalVisible = helpModalVisible || progressModalVisible; // Extend with other modals if any
 
     if (!anyModalVisible && !event.defaultPrevented) {
+      // Check again for vimcore waiting, specifically for single char shortcuts
+      if (window.vimcore && window.vimcore.isWaitingForMotionOrTargetChar && 
+          key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey && key !== 'escape') {
+          if (key === 'r' || key === 'q' || key === 's') { // Explicitly list clashing single-key shortcuts
+            return;
+          }
+      }
+
       if (key === 'r') {
         console.log("Global 'r' key pressed for My Progress");
         showProgressModal();
@@ -206,6 +227,13 @@ async function initializeGame() {
 
     // --- Home Screen Specific Shortcuts (if home is visible and no modals) ---
     if (welcomeScreenEl && !welcomeScreenEl.classList.contains('hidden') && !anyModalVisible) {
+      // Check again for vimcore waiting before processing home screen shortcuts
+      if (window.vimcore && window.vimcore.isWaitingForMotionOrTargetChar && 
+          key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey && key !== 'escape') {
+          if (key === 's') { // Explicitly list clashing single-key shortcuts for home screen
+             return;
+          }
+      }
       if (key === 's' && !event.defaultPrevented) {
         console.log("'s' key pressed on home screen for Start Learning");
         // Simulate click on the "Start Learning" menu item
@@ -312,92 +340,92 @@ function initializeTerminal() {
     }
   });
 
-  term.onKey(async ({ key, domEvent: e }) => { // e is domEvent here
-    console.log(`term.onKey: key: ${e.key}, ctrl: ${e.ctrlKey}, alt: ${e.altKey}, meta: ${e.metaKey}, shift: ${e.shiftKey}`); // Added shiftKey
+  term.onKey(async ({ key, domEvent: e }) => { 
+    console.log(`term.onKey: key: ${e.key}, ctrl: ${e.ctrlKey}, alt: ${e.altKey}, meta: ${e.metaKey}, shift: ${e.shiftKey}`);
+
     if (gameAreaEl.classList.contains('hidden') || !currentLevelData) {
         console.log('term.onKey: Exiting because game area is hidden or no current level data.');
         return;
     }
-    // Prevent Vim processing if a modifier (Ctrl, Alt, Meta) is pressed, unless it's a specifically allowed combo (none for now in this part)
-    // Shift is allowed for typing characters like '$', 'G', etc.
-    if ((e.ctrlKey || e.altKey || e.metaKey) /* && !isAllowedCtrlAltMetaCombo */ ) {
-        console.log('term.onKey: Ctrl, Alt, or Meta pressed, not processing as Vim command here.');
-        return;
+
+    if (window.vimcore && window.vimcore.isWaitingForMotionOrTargetChar) {
+        if (e.key.length === 1 || e.key === 'Escape') {
+            console.log('term.onKey: vimcore is waiting, key intended for vimcore. Stopping propagation.');
+            e.preventDefault();
+            e.stopPropagation();
+            // Proceed to send the key to vimcore below
+        } else {
+            // If vimcore is waiting, but it's a multi-char key not Escape or a modified key that wasn't caught by global handlers.
+            // This case should be rare if global handlers for Ctrl/Alt/Meta work correctly.
+            // We might want to preventDefault/stopPropagation here too to be safe, 
+            // or return if it's definitely not for vimcore.
+            // For now, let it pass to vimcore which will likely ignore it.
+        }
+    } else {
+        // Vimcore is NOT waiting. Check for global shortcut modifiers that might conflict with Vim's single key commands.
+        // This is a fallback if document-level listeners didn't catch them first.
+        if ((e.ctrlKey || e.altKey || e.metaKey) && e.key !== 'Control' && e.key !== 'Alt' && e.key !== 'Meta' && e.key !== 'Shift') {
+            console.log('term.onKey: Modifier key (Ctrl/Alt/Meta) detected. Assuming not for Vimcore if it reached here.');
+            // e.preventDefault(); // Optional: if we are sure no xterm/vim function uses this combo
+            // e.stopPropagation(); // Optional
+            return; 
+        }
     }
 
     let vimKey = key;
-    if (e.key.length > 1) { // Handle special keys like 'Escape', 'ArrowLeft', etc.
+    if (e.key.length > 1) { 
         if (e.key === 'Escape') {
             vimKey = 'Escape';
-            // Clear pending counts and keystrokes on Escape
-            window.vimcore.activeCount = "";
-            window.vimcore.pendingKeystrokes = "";
-            updateStatusBar(); // Update status bar to clear pending display
-        }
-        // Potentially map other special keys if needed, or ignore them for Vim command processing
-        else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
-            // These are often remapped or handled by Vim, but for now, let's see if basic Vim keys cover them
-            // If these need to map to h,j,k,l,0,$ we can do that here or ensure Vimcore handles them if sent directly.
-            // For now, we assume they are not Vim commands unless explicitly mapped.
-            console.log(`term.onKey: Special key ${e.key} pressed, not treating as simple Vim command.`);
-            // return; // Decide if these should be ignored or mapped
+            // vimcore.processInput will handle resetting its state (pendingKeystrokes, isWaiting...)
+            // updateStatusBar() will be called after processInput returns.
+        } 
+        // ... (rest of special key handling like Arrows, Home, End - currently mostly ignored by vimcore) ...
+        else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Insert', 'Delete', 'PageUp', 'PageDown'].includes(e.key) || e.key.startsWith('F')) {
+            console.log(`term.onKey: Special key ${e.key} pressed, not treating as simple Vim command. Vimcore might ignore it.`);
+            // For now, send them to vimcore, which will likely ignore them and set commandProcessed=false
+            // unless we specifically map them in vimcore in the future.
+             vimKey = e.key; // Send the actual key name
         } else {
-             // Other special keys like F1-F12, Tab, Enter etc.
-             console.log(`term.onKey: Special key ${e.key} pressed, not treating as simple Vim command.`);
-             // return; // Usually ignored unless specifically mapped
+             console.log(`term.onKey: Other special key ${e.key} pressed.`);
+             return; // Ignore other unmapped special keys for now
         }
-    } else if (e.shiftKey) {
-        // If shift is pressed with a letter, it produces an uppercase letter (e.g., Shift + g = G)
-        // This is fine, 'G' is a valid Vim command. '$' is Shift+4 on US keyboards.
-        // No special handling needed here for Shift + letter, as `key` will be the correct character.
+    } else if (e.shiftKey && e.key.length === 1) {
+        // If shift is pressed with a letter, it produces an uppercase letter (e.g., Shift + g = G).
+        // `key` will be the correct uppercase character (e.g., 'G', '$').
+        // This is fine. No special handling needed here for Shift + letter.
     }
 
-    // Basic handling for 'gg' - can be improved with a slight delay if needed
-    if (window.vimcore.lastChar === 'g' && vimKey === 'g') {
-        window.vimcore.lastChar = null; // Reset after detecting gg
+    // Basic handling for 'gg' sequence
+    if (window.vimcore.lastChar === 'g' && vimKey === 'g' && !window.vimcore.isWaitingForMotionOrTargetChar) {
+        window.vimcore.lastChar = null; 
         vimKey = 'gg';
-    } else if (vimKey === 'g') {
+    } else if (vimKey === 'g' && !window.vimcore.isWaitingForMotionOrTargetChar) {
         window.vimcore.lastChar = 'g';
-        // Don't process 'g' immediately, wait for next key. If next key is not 'g',
-        // then the single 'g' will be processed (which does nothing currently but resets count).
-        // This means single 'g' as a prefix for other commands (like 'ge', 'gt') is not yet supported well.
-        // For now, if user types 'g' then something else, the 'g' effectively gets eaten by count reset, 
-        // and then the next command is processed. This is a simplification.
+        updateStatusBar(); // Show the 'g' in pending keys
         console.log("term.onKey: 'g' pressed, waiting for potential second 'g'.");
-        return; // Wait for the next key
+        return; 
     } else {
-        window.vimcore.lastChar = null; // Not 'g', so reset any pending 'g' state
+        window.vimcore.lastChar = null; 
     }
     
     const result = window.vimcore.processInput(vimKey, currentLines, currentCursorPos);
 
+    // After vimcore.processInput, isWaitingForMotionOrTargetChar should be correctly updated by vimcore.
+    // So, global shortcuts will be unblocked if the sequence was completed or cancelled.
+
     if (result.commandProcessed) {
         currentLines = result.lines;
         currentCursorPos = result.cursor;
-        
         renderEditorContent(); 
-        updateStatusBar(); // This will now also clear/update pending keys display
-        
-        // Check level goal only if a command was processed that could affect it
+        // updateStatusBar(); // Called below, also after non-processed to show pending
         await checkLevelGoal(); 
     } else {
-        // Count was updated, or a multi-key sequence is in progress.
-        // Update status bar to show pending keys
-        updateStatusBar();
-        console.log('term.onKey: Vimcore updated count or is waiting for multi-key cmd. No re-render.');
+        // Count was updated, or a multi-key sequence is still in progress (e.g. 'd' is now pending)
+        // or an invalid key was pressed after a pending starter (e.g. 'fx' then 'z' - 'z' is unprocessed here)
+        // or a known command did nothing (e.g. 'h' at start of line)
+        console.log('term.onKey: Vimcore did not process command fully, or is waiting, or count updated.');
     }
-
-    // This was old logic for allowed commands check, vimcore now handles this implicitly.
-    /*
-    if (currentLevelData.allowedCommands && currentLevelData.allowedCommands.includes(vimKey)) {
-        // ... processing ...
-    } else if (currentLevelData.allowedCommands && !currentLevelData.allowedCommands.includes(vimKey)){
-        console.log(`term.onKey: Command '${vimKey}' is NOT allowed for this level.`);
-        term.write('\x07'); // Bell sound
-    } else {
-        console.log(`term.onKey: Key '${vimKey}' was not in allowedCommands list, or allowedCommands is undefined.`);
-    }
-    */
+    updateStatusBar(); // Update status bar regardless to show current state (pending keys, cursor)
   });
 }
 
