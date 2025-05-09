@@ -23,7 +23,7 @@
         "startTextFile": "levels/level2_start.txt",
         "goalTextFile": "levels/level2_start.txt",
         "verify": "cursor_at_pos",
-        "goalCursor": { "row": 0, "col": 25 },
+        "goalCursor": { "row": 0, "col": 11 },
         "allowedCommands": ["$", "h", "l"],
         "startCursor": { "row": 0, "col": 6 },
         "hint": "Use the <kbd>$</kbd> key to jump to the end of the line."
