@@ -164,11 +164,11 @@
       {
         "id": 13,
         "title": "Find next character (f)",
-        "description": "Cursor is at the beginning of the line. Move to the first occurrence of the character 'c' using <code>fc</code>.",
+        "description": "Cursor is at the beginning of the line. Move to the first occurrence of the character 'y' using <code>fy</code>.",
         "startTextFile": "levels/level12_start.ts",
         "goalTextFile": "levels/level12_start.ts",
         "verify": "cursor_at_pos",
-        "goalCursor": { "row": 0, "col": 6 },
+        "goalCursor": { "row": 0, "col": 7 },
         "allowedCommands": ["f", "c", "h", "j", "k", "l"],
         "startCursor": { "row": 0, "col": 0 },
         "hint": "Type <code>f</code> followed by the character you want to find on the current line."
