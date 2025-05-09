@@ -204,7 +204,7 @@
         "startTextFile": "levels/level12_start.ts",
         "goalTextFile": "levels/level12_start.ts",
         "verify": "cursor_at_pos",
-        "goalCursor": { "row": 1, "col": 19 },
+        "goalCursor": { "row": 1, "col": 16 },
         "allowedCommands": ["T", ":", "h", "j", "k", "l"],
         "startCursor": { "row": 1, "col": 26 },
         "hint": "Type <code>T</code> followed by a character to move the cursor just after that character (searching backwards) on the current line."
