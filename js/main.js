@@ -367,6 +367,18 @@ function initializeTerminal() {
             console.log('term.onKey: Modifier key (Ctrl/Alt/Meta) + char detected. Letting it bubble for global shortcuts.');
             return; // Let browser/global listeners handle it.
         }
+
+        // NEW: Check for global single-key shortcuts 'r' and 'q'
+        // These should take precedence over Vim commands if the game is active.
+        const lowerKey = e.key.toLowerCase();
+        if (lowerKey === 'r' || lowerKey === 'q') {
+            // These are global shortcuts. Let them bubble up to the document listener.
+            // Do not preventDefault or stopPropagation here within term.onKey.
+            // Also, do not send them to vimcore.processInput.
+            console.log(`term.onKey: Detected global shortcut key '${e.key}'. Letting it bubble up.`);
+            return; // Exit term.onKey's processing for these keys.
+        }
+        
         // For any other key that reaches here (single chars, Shift+char, Escape, Tab, Enter, etc.)
         // when vimcore is NOT waiting for a multi-key sequence part, we assume it *could* be a Vim command.
         // So, we should prevent default browser actions and stop it from bubbling to global document listeners
@@ -374,7 +386,7 @@ function initializeTerminal() {
         // Escape is a special case; it might be used by Vim or by global handlers (like closing modals).
         // The global handlers for modals check if a modal is open first.
         if (e.key !== 'Escape') { // For non-Escape keys that are candidates for Vim commands
-             console.log(`term.onKey: Key '${e.key}' is a candidate for Vim. Stopping propagation.`);
+             console.log(`term.onKey: Key '${e.key}' (not r/q global shortcut) is a candidate for Vim. Stopping propagation.`);
              e.preventDefault();
              e.stopPropagation();
         } else {
